@@ -1,0 +1,28 @@
+---
+apiVersion: agent-install.openshift.io/v1beta1
+kind: InfraEnv
+metadata:
+  name: ztp
+  namespace: ztp
+spec:
+#  proxy:
+#    httpProxy: <proxy>
+#    httpsProxy: <proxy>
+#    noProxy: <domain-or-ips-comma-sepparated>
+  additionalNTPSources:
+    - clock.corp.redhat.com 
+  clusterRef:
+    name: ztp
+    namespace: ztp
+  sshAuthorizedKey: 'ssh-rsa <omitted>'
+  agentLabelSelector:
+    matchLabels:
+      cluster-name: "ztp"
+  pullSecretRef:
+    name: assisted-deployment-pull-secret-ztp
+# Optional: NMstate configuration. used for creating bonds, or other netconfigs at boot time
+#  nmStateConfigLabelSelector:
+#    matchLabels:
+#      cluster-name: ztp
+# User for modify ignition during discovery
+#  ignitionConfigOverride: ''

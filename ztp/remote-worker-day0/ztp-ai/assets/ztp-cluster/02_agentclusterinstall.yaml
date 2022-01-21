@@ -1,0 +1,28 @@
+---
+apiVersion: extensions.hive.openshift.io/v1beta1
+kind: AgentClusterInstall
+metadata:
+  name: ztp
+  namespace: ztp
+spec:
+  manifestsConfigMapRef:
+    name: extra-manifests-ztp
+  clusterDeploymentRef:
+    name: ztp
+  imageSetRef:
+    name: img4.9.13-x86-64-appsub
+  apiVIP: 192.168.126.3
+  ingressVIP: 192.168.126.2
+  networking:
+    networkType: "OVNKubernetes"
+    clusterNetwork:
+      - cidr: "10.128.0.0/14"
+        hostPrefix: 23
+    serviceNetwork:
+      - "172.30.0.0/16"
+    machineNetwork:
+      - cidr: "192.168.126.0/24"
+  provisionRequirements:
+    controlPlaneAgents: 3
+    workerAgents: 3
+  sshPublicKey: 'ssh-rsa <omitted>'
