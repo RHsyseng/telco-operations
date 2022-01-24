@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generators:
+  - site-specific-policies/ztp-rwn.yaml
+resources:
+# List of Namespace*.yaml required by the PolicyGenTemplate*.yaml
+  - ns.yaml
+

@@ -1,0 +1,170 @@
+---
+apiVersion: ran.openshift.io/v1
+kind: SiteConfig
+metadata:
+  name: "ztp-rwn"
+  namespace: "ztp-rwn"
+spec:
+  baseDomain: "e2e.bos.redhat.com"
+  pullSecretRef:
+    name: "assisted-deployment-pull-secret"
+  clusterImageSetNameRef: "img4.9.13-x86-64-appsub"
+  sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDDNV+FnYBskuxjOjAZ4TZ6p5mS1juqc6decBidcvLmvPirV0B3OxVGcYCnx3by2d832EQaW9XD6WWWePoSQj2ES4aV0iUVSkRasN5IL0tCJAaeQHqNBvCFKWimlAb8lyYYIPq5y6SfIx4/I3LM/61XTE7T59IXT1TzPsv2Mi5AIRyQQR5BklRZysT+l4NFF5wVnUhdZWPVgCXbb3oevhAHCQQdq1n7JrAb5NG/lSS0YwEN74U5XUTDy8QCFm11TMtcE/ClRL3Z33CAF4uxmJyrvNLsdTPQCTWNTEBnMLIlMJTp3VLpfmnciYUeKn62p5T2g1FxHxFBajhK9wwGymJM+aurK/SvH2z2zWgBszMqhR/SbYoqDy6q8BS9XkKY5pRbzDgIr3oZYriVal6eoSrVpMb4tn62T2lwYNcYCRKnIpKcgELdFNT0nq4TWIdi1JS9otwDWYZRhpb3UXdtK+GAijZnhA0skmLJGzpDld9V8rzcn+7/Vcqm4RKnaunkHzk= root@mavazque"
+  clusters:
+  - clusterName: "ztp"
+    clusterLabels:
+      ztp-rwn: ""
+      sites: "ztp-rwn"
+    networkType: "OVNKubernetes"
+    clusterNetwork:
+      - cidr: 10.128.0.0/14
+        hostPrefix: 23
+    machineNetwork:
+      - cidr: 192.168.126.0/24
+    serviceNetwork:
+      - 172.30.0.0/16
+    extraManifestPath: ztp-rwn-extra-manifests/
+    additionalNTPSources:
+      - clock.corp.redhat.com 
+      - pool.ntp.org
+    apiVIP: 192.168.126.3
+    ingressVIP: 192.168.126.2
+    nodes:
+      - hostName: "openshift-master-0"
+        role: master
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/b0687546-cc5a-49ab-8aca-3ad34f53484b
+        bmcCredentialsName:
+          name: "master-0-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:05"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:05"
+      - hostName: "openshift-master-1"
+        role: master
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/f801edca-f749-40c7-9398-4e0ce5129368
+        bmcCredentialsName:
+          name: "master-1-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:06"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:06"
+      - hostName: "openshift-master-2"
+        role: master
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/460cc947-6027-4548-9d1e-b337997e489a
+        bmcCredentialsName:
+          name: "master-2-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:07"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:07"
+      - hostName: "openshift-worker-0"
+        role: worker
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/d492ef6f-a05b-432f-a4e6-65c1be698391
+        bmcCredentialsName:
+          name: "worker-0-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:08"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:08"
+      - hostName: "openshift-worker-1"
+        role: worker
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/04912b50-b0c2-4ef3-866a-45e3bb232c33
+        bmcCredentialsName:
+          name: "worker-1-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:09"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:09"
+      - hostName: "openshift-worker-2"
+        role: worker
+        bmcAddress: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/239e4461-6f8a-46a5-b40e-70788c1ef60f
+        bmcCredentialsName:
+          name: "worker-2-ztp"
+        bootMACAddress: "de:ad:bb:f3:00:10"
+        bootMode: "UEFI"
+        rootDeviceHints:
+          deviceName: /dev/vda
+        nodeNetwork:
+          config:
+            interfaces:
+              - name: ens3
+                type: ethernet
+                state: up
+                ipv4:
+                  enabled: true
+                  dhcp: true
+                ipv6:
+                  enabled: false
+          interfaces:
+            - name: "ens3"
+              macAddress: "de:ad:bb:f3:00:10"
