@@ -91,3 +91,10 @@ We followed the [deployment steps](https://github.com/openshift-kni/cnf-features
     oc get agentclusterinstall -n $CLUSTER $CLUSTER -o jsonpath='{.status.conditions[?(@.type=="Completed")]}' | jq
     curl -sk $(oc get agentclusterinstall -n $CLUSTER $CLUSTER -o jsonpath='{.status.debugInfo.eventsURL}')  | jq '.[-2,-1]'
     ~~~
+10. The cluster deployment will eventually finish and we will have a cluster with a remote worker node deployed.
+
+## **Potential Next Steps**
+
+We could have a PolicyGenTemplate to move the Ingress Routers to the non-remote worker nodes as a day2 config enforced by RHACM. Since PolicyGenTool does not have such a template we could not get it configured for this spike.
+
+Available templates ara available [here](https://github.com/openshift-kni/cnf-features-deploy/tree/master/ztp/source-crs).

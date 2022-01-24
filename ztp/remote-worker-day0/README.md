@@ -10,3 +10,9 @@ This work has been tested following two approaches:
 2. Using ZTP PolicyGenTool (Abstraction of the above)
 
 The work is organized in two folders, you want to read first the work under `ztp-ai` folder and after that you can continue reading `ztp-policygentool`.
+
+## Diagram
+
+The final deployment is able to deploy both multi-node and single-node OpenShift clusters that once installed will join the Hub cluster as managed clusters.
+
+![Diagram](./assets/ZTP-RWN.png)
