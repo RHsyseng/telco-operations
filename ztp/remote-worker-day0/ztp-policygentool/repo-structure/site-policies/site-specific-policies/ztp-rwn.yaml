@@ -1,0 +1,11 @@
+apiVersion: ran.openshift.io/v1
+kind: PolicyGenTemplate
+metadata:
+  name: "ztp-rwn"
+  namespace: "ztp-rwn-policies"
+spec:
+  bindingRules:
+    sites: "ztp-rwn"
+  mcp: "master"
+  remediationAction: inform
+  sourceFiles: []

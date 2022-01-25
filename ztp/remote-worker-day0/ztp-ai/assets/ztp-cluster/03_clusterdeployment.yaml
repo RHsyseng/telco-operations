@@ -1,0 +1,24 @@
+---
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: ztp
+  namespace: ztp
+spec:
+  baseDomain: e2e.bos.redhat.com
+  clusterName: ztp
+  controlPlaneConfig:
+    servingCertificates: {}
+  installed: false
+  clusterInstallRef:
+    group: extensions.hive.openshift.io
+    kind: AgentClusterInstall
+    name: ztp
+    version: v1beta1
+  platform:
+    agentBareMetal: 
+      agentSelector:
+        matchLabels:
+          cluster-name: "ztp"
+  pullSecretRef:
+    name: assisted-deployment-pull-secret-ztp

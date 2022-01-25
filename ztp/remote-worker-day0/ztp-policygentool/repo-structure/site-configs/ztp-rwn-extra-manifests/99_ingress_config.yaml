@@ -1,0 +1,13 @@
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: default
+  namespace: openshift-ingress-operator
+spec:
+  nodePlacement:
+    tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+    nodeSelector:
+      matchLabels:
+        node-role.kubernetes.io/master: ""

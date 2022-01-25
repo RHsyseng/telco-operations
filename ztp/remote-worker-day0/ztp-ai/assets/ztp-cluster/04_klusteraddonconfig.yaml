@@ -1,0 +1,27 @@
+---
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: ztp
+  namespace: ztp
+spec:
+  applicationManager:
+    argocdCluster: false
+    enabled: true
+  certPolicyController:
+    enabled: true
+  clusterLabels:
+#    cloud: auto-detect
+#    vendor: auto-detect
+    name: ztp
+    cloud: Baremetal
+    vendor: KVM
+  clusterName: ztp
+  clusterNamespace: ztp
+  iamPolicyController:
+    enabled: true
+  policyController:
+    enabled: true
+  searchCollector:
+    enabled: true
+  version: 2.2.0

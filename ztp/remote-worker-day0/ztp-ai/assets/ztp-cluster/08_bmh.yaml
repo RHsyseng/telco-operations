@@ -1,0 +1,192 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: master-0-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: master-0-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-master-0"
+    bmac.agent-install.openshift.io/role: "master"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:05
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/9d40cd5b-73e2-436f-9754-d67e20846c6b
+    credentialsName: master-0-ztp
+    disableCertificateVerification: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: master-1-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: master-1-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-master-1"
+    bmac.agent-install.openshift.io/role: "master"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:06
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/ed3ad6a6-1022-4996-a869-3100e91e4f90
+    credentialsName: master-1-ztp
+    disableCertificateVerification: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: master-2-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: master-2-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-master-2"
+    bmac.agent-install.openshift.io/role: "master"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:07
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/3cef0ce6-6be3-4092-803e-fbe109f9908c
+    credentialsName: master-2-ztp
+    disableCertificateVerification: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: worker-0-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: worker-0-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-worker-0"
+    bmac.agent-install.openshift.io/role: "worker"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:08
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/f10e5340-581c-4a77-8196-9c7318c2bd80
+    credentialsName: worker-0-ztp
+    disableCertificateVerification: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: worker-1-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: worker-1-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-worker-1"
+    bmac.agent-install.openshift.io/role: "worker"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:09
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/a8333a70-e430-435c-b031-826d246b4f3f
+    credentialsName: worker-1-ztp
+    disableCertificateVerification: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: worker-2-ztp
+  namespace: ztp
+data:
+  username: "dGVzdA=="
+  password: "dGVzdA=="
+type: Opaque
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: worker-2-ztp
+  namespace: ztp
+  labels:
+    infraenvs.agent-install.openshift.io: "ztp"
+  annotations:
+    inspect.metal3.io: disabled
+    bmac.agent-install.openshift.io/hostname: "openshift-worker-2"
+    bmac.agent-install.openshift.io/role: "worker"
+spec:
+  online: true
+  bootMACAddress: de:ad:bb:f3:00:10
+  automatedCleaningMode: disabled
+  rootDeviceHints:
+    deviceName: /dev/vda
+  bmc:
+    address: redfish-virtualmedia://192.168.126.1:8080/redfish/v1/Systems/a4f5ef30-40c6-4b51-817c-c407572acf03
+    credentialsName: worker-2-ztp
+    disableCertificateVerification: true
