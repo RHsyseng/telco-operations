@@ -2,7 +2,10 @@
 
 :warning: The work exposed here is not supported in any way by Red Hat, this is the result of exploratory work. Use at your own risk.
 
-If you want to see how to add a remote worker node at day 2 with Assisted Installer you can check [this video](https://drive.google.com/file/d/1eaD_eNEd7_MfDvszWYm4DAhBDpA5sUmd/view?usp=sharing).
+If you want to see how to add a remote worker node at day 2 with Assisted Installer you can check [this video](https://drive.google.com/file/d/1eaD_eNEd7_MfDvszWYm4DAhBDpA5sUmd/view?usp=sharing) from @karmab.
+
+If you want to see how you can deploy a RWN and a SNO with Assisted Installer you can check [this video](https://drive.google.com/file/d/1xN1Ew3oGHARwqcWqEmxTZrIEf3N_uXGt/view?usp=sharing) from @karmab.
+
 
 ## **Requirements**
 
@@ -66,7 +69,7 @@ oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"watc
 
 ### **Current Limitations**
 
-Since deploying remote workers as a day0 operation is not supported yet by AI, we needed to disable some validations that are done by AI before the installation can happen.
+Since deploying remote workers as a day0 operation is not supported yet by AI, we need to disable some validations that are done by AI before the installation can happen.
 
 1. Create a ConfigMap to configure disabled validations so the installation can start
 
