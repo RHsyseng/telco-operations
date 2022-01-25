@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: test-pod-master-toleration
+  name: test-pod-master-toleration
+spec:
+  tolerations:
+  - key: "node-role.kubernetes.io/master"
+    effect: "NoSchedule"
+  containers:
+  - image: quay.io/mavazque/reversewords:latest
+    name: test-pod-master-toleration
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
