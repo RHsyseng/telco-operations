@@ -9,7 +9,14 @@ The information here asumes you have followed [this other document](../ztp-ai/RE
 * OpenShift Cluster acting as Hub (We tested with 4.9.12)
 * RH ACM (We tested with 2.4)
 * Hardware with RedFish support (We virtualized hardware with KVM and emulated RedFish with SushyTools)
-* OpenShift GitOps Operator deployed
+* OpenShift GitOps Operator deployed (CSV openshift-gitops-operator.v1.3.2 required due to this [issue](https://coreos.slack.com/archives/C027GN8TJSW/p1643221475013500))
+
+    ~~~yaml
+    # Pin to 1.3.2 release
+    startingCSV: openshift-gitops-operator.v1.3.2
+    installPlanApproval: Manual 
+    ~~~
+
 * ZTP PolicyGenTool (We tested with v4.10)
 
 ## **Deployment**
