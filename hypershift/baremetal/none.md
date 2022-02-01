@@ -9,6 +9,7 @@ This work tries to answer the questions exposed in [this card](https://issues.re
 ## **Hypershift Operator requirements**
 
 * cluster-admin access to an OpenShift Cluster (We tested it with 4.9.17) to deploy the CRDs + operator
+* 1 filesystem type Persistent Volume (4Gi minimum) to store the `etcd` database for demo purposes (3x for 'production' environments)
 
 ## **Hypershift Operator installation**
 
@@ -85,7 +86,7 @@ api.hosted0.example.com.  IN A  10.19.138.33
 api.hosted0.example.com.  IN A  10.19.138.37
 ~~~
 
-* DNS entry to point `*.apps.${cluster}.${domain}` to a load balancer deployed to redirect incoming traffic to the ingresses pod (the (OpenShift documentation)[https://docs.openshift.com/container-platform/4.9/installing/installing_platform_agnostic/installing-platform-agnostic.html#installation-load-balancing-user-infra-example_installing-platform-agnostic] provides some instructions about this)
+* DNS entry to point `*.apps.${cluster}.${domain}` to a load balancer deployed to redirect incoming traffic to the ingresses pod [the OpenShift documentation](https://docs.openshift.com/container-platform/4.9/installing/installing_platform_agnostic/installing-platform-agnostic.html#installation-load-balancing-user-infra-example_installing-platform-agnostic) provides some instructions about this)
 > **NOTE**: This is not strictly required to deploy a sample cluster but to access the exposed routes there. Also, it can be simply an A record pointing to a worker IP where the ingress pods are running and enabling the `hostedcluster.spec.infrastructureAvailabilityPolicy: SingleReplica` configuration parameter.
 
 * Pull-secret (available at cloud.redhat.com)
@@ -218,11 +219,40 @@ spec:
 EOF
 ~~~
 
+> **NOTE**: The `HostedCluster` and `NodePool` objects can be created using the `hypershift` binary as `hypershift create cluster`. See the `hypershift create cluster -h` output for more information.
+
 After a while, a number of pods will be created in the `${CLUSTERS_NAMESPACE}` namespace. Those pods are the control plane of the hosted cluster.
 
 ~~~sh
-oc get pods -n ${CLUSTERS_NAMESPACE}
-<insert here>
+oc get pods -n ${HOSTED_CLUSTER_NS}
+
+NAME                                              READY   STATUS     RESTARTS        AGE
+catalog-operator-54d47cbbdb-29mzf                 2/2     Running    0               6m24s
+certified-operators-catalog-78db79f86-6hlk9       1/1     Running    0               6m30s
+cluster-api-655c8ff4fb-598zs                      1/1     Running    1 (5m57s ago)   7m26s
+cluster-autoscaler-86d9474fcf-rmwzr               0/1     Running    0               6m11s
+cluster-policy-controller-bf87c9858-nnlgw         1/1     Running    0               6m37s
+cluster-version-operator-ff9475794-dc9hf          2/2     Running    0               6m37s
+community-operators-catalog-6f5797cdc4-2hlcp      1/1     Running    0               6m29s
+control-plane-operator-749b94cf54-p2lg2           1/1     Running    0               7m23s
+etcd-0                                            1/1     Running    0               6m46s
+hosted-cluster-config-operator-6646d8f868-h9r2w   0/1     Running    0               6m34s
+ignition-server-7797c5f7-vkb2b                    1/1     Running    0               7m20s
+ingress-operator-5dc47b99b7-jttpg                 0/2     Init:0/1   0               6m35s
+konnectivity-agent-85f979fcb4-67c5h               1/1     Running    0               6m45s
+konnectivity-server-576dc7b8b7-rxgms              1/1     Running    0               6m46s
+kube-apiserver-66d99fd9fb-dvslc                   2/2     Running    0               6m43s
+kube-controller-manager-68dd9fb75f-mgd22          1/1     Running    0               6m42s
+kube-scheduler-748d9f5bcb-mlk52                   0/1     Running    0               6m42s
+machine-approver-c8c68ffb9-psc6n                  0/1     Running    0               6m11s
+oauth-openshift-7fc7dc9c66-fg258                  1/1     Running    0               6m8s
+olm-operator-54d7d78b89-f9dng                     2/2     Running    0               6m22s
+openshift-apiserver-64b4669d54-ffpw2              2/2     Running    0               6m41s
+openshift-controller-manager-7847ddf4fb-x5659     1/1     Running    0               6m38s
+openshift-oauth-apiserver-554c449b8f-lk97w        1/1     Running    0               6m41s
+packageserver-6fd9f8479-pbvzl                     0/2     Init:0/1   0               6m22s
+redhat-marketplace-catalog-8cc88f5cb-hbxv9        1/1     Running    0               6m29s
+redhat-operators-catalog-b749d6945-2bx8k          1/1     Running    0               6m29s
 ~~~
 
 The hosted cluster's kubeconfig can be extracted as:
