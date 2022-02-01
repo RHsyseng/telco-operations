@@ -1,0 +1,360 @@
+# **HyperShift + Bare Metal workers using 'none' provider**
+
+This document explains how to deploy HyperShift in OpenShift and then use the 'none' provider to deploy bare metal worker nodes for our `HostedClusters`.
+
+This work tries to answer the questions exposed in [this card](https://issues.redhat.com/browse/KNIP-1802).
+
+> **WARNING**: HyperShift is a work-in-progress project and it is not officially supported by Red Hat.
+
+## **Hypershift Operator requirements**
+
+* cluster-admin access to an OpenShift Cluster (We tested it with 4.9.17) to deploy the CRDs + operator
+
+## **Hypershift Operator installation**
+
+Currently, the HyperShift operator is deployed using the `hypershift` binary, which needs to be compiled manually.
+RHEL8 doesn't include go1.17 officially but it can be installed via `gvm` by following the next steps:
+
+~~~sh
+# Install prerequisites
+sudo dnf install -y curl git make bison gcc glibc-devel
+git clone https://github.com/openshift/hypershift.git
+pushd hypershift
+ 
+# Install gvm to install go 1.17
+bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+source ${HOME}/.gvm/scripts/gvm
+gvm install go1.17
+gvm use go1.17
+
+# build the binary
+make hypershift
+popd
+~~~
+
+Then, the `hypershift` binary can be moved to a convenient place as:
+
+~~~sh
+sudo install -m 0755 -o root -g root hypershift/bin/hypershift /usr/local/bin/hypershift
+~~~
+
+Alternatively, it can be compiled using a container as:
+
+~~~sh
+# Install prerequisites
+sudo dnf install podman -y
+# Compile hypershift
+mkdir -p ./tmp/ && \
+podman run -it -v ${PWD}/tmp:/var/tmp/hypershift-bin/:Z --rm docker.io/golang:1.17 sh -c \
+  'git clone --depth 1 https://github.com/openshift/hypershift.git /var/tmp/hypershift/ && \
+  cd /var/tmp/hypershift && \
+  make hypershift && \
+  cp bin/hypershift /var/tmp/hypershift-bin/'
+sudo install -m 0755 -o root -g root ./tmp/hypershift /usr/local/bin/hypershift
+~~~
+
+Once the binary is in place, the operator deployment is performed as:
+
+~~~sh
+hypershift install
+~~~
+
+Using `hypershift install --render > hypershift-install.yaml` will create a yaml file with all the assets required to deploy HyperShift. It has been [included in the assets folder](../assets/hypershift-install.yaml) as a reference.
+
+> **NOTE**: There are a few more flags to customize the HyperShift operator installation but they are out of the scope of this document.
+
+## **Deploy a hosted cluster**
+
+There are two main CRDs to describe a hosted cluster:
+* [`HostedCluster`](https://hypershift-docs.netlify.app/reference/api/#hypershift.openshift.io/v1alpha1.HostedCluster) defines the control plane hosted in the management OpenShift
+* [`NodePool`](https://hypershift-docs.netlify.app/reference/api/#hypershift.openshift.io/v1alpha1.NodePool) defines the nodes that will be created/attached to a hosted cluster
+
+The `hostedcluster.spec.platform` specifies the underlying infrastructure provider for the cluster and is used to configure platform specific behavior, so depending on the environment it is required to configure it properly.
+
+In this repo we will cover the 'none' provider.
+
+### **Deploy a 'none' hosted cluster and adding a bare metal worker**
+
+#### **Requisites**
+
+* DNS entry to point `api.${cluster}.${domain}` to each of the nodes where the hostedcluster will be running. This is because the hosted cluster API is exposed as a `nodeport`. For example:
+
+~~~sh
+api.hosted0.example.com.  IN A  10.19.138.32
+api.hosted0.example.com.  IN A  10.19.138.33
+api.hosted0.example.com.  IN A  10.19.138.37
+~~~
+
+* DNS entry to point `*.apps.${cluster}.${domain}` to a load balancer deployed to redirect incoming traffic to the ingresses pod (the (OpenShift documentation)[https://docs.openshift.com/container-platform/4.9/installing/installing_platform_agnostic/installing-platform-agnostic.html#installation-load-balancing-user-infra-example_installing-platform-agnostic] provides some instructions about this)
+> **NOTE**: This is not strictly required to deploy a sample cluster but to access the exposed routes there. Also, it can be simply an A record pointing to a worker IP where the ingress pods are running and enabling the `hostedcluster.spec.infrastructureAvailabilityPolicy: SingleReplica` configuration parameter.
+
+* Pull-secret (available at cloud.redhat.com)
+* ssh public key already available (it can be created as `ssh-keygen -t rsa -f /tmp/sshkey -q -N ""`)
+* Any httpd server available to host a ignition file (text) and a modified RHCOS iso
+
+#### **Procedure**
+
+* Create a file containing all the variables depending on the enviroment:
+
+~~~sh
+cat <<'EOF' > ./myvars
+export CLUSTERS_NAMESPACE="clusters"
+export HOSTED="hosted0"
+export HOSTED_CLUSTER_NS="clusters-${HOSTED}"
+export PULL_SECRET_NAME="${HOSTED}-pull-secret"
+export MACHINE_CIDR="10.19.138.0/24"
+export OCP_RELEASE_VERSION="4.9.17"
+export OCP_ARCH="x86_64"
+export BASEDOMAIN="example.com"
+
+export PULL_SECRET_CONTENT=$(cat ~/clusterconfigs/pull-secret.txt)
+export SSH_PUB=$(cat ~/.ssh/id_rsa.pub)
+EOF
+source ./myvars
+~~~
+
+* Create a namespace to host the HostedCluster and secrets
+
+~~~sh
+envsubst <<"EOF" | oc apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+ name: ${CLUSTERS_NAMESPACE}
+EOF
+
+export PS64=$(echo -n ${PULL_SECRET_CONTENT} | base64 -w0)
+envsubst <<"EOF" | oc apply -f -
+apiVersion: v1
+data:
+ .dockerconfigjson: ${PS64}
+kind: Secret
+metadata:
+ name: ${PULL_SECRET_NAME}
+ namespace: ${CLUSTERS_NAMESPACE}
+type: kubernetes.io/dockerconfigjson
+EOF
+ 
+envsubst <<"EOF" | oc apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${HOSTED}-ssh-key
+  namespace: ${CLUSTERS_NAMESPACE}
+stringData:
+  id_rsa.pub: ${SSH_PUB}
+EOF
+~~~
+
+* Create the `hostedcluster` and the `nodepool`:
+
+~~~sh
+envsubst <<"EOF" | oc apply -f -
+apiVersion: hypershift.openshift.io/v1alpha1
+kind: HostedCluster
+metadata:
+  name: ${HOSTED}
+  namespace: ${CLUSTERS_NAMESPACE}
+spec:
+  release:
+    image: "quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE_VERSION}-${OCP_ARCH}"
+  pullSecret:
+    name: ${PULL_SECRET_NAME}
+  sshKey:
+    name: "${HOSTED}-ssh-key"
+  networking:
+    serviceCIDR: "172.31.0.0/16"
+    podCIDR: "10.132.0.0/14"
+    machineCIDR: "${MACHINE_CIDR}"
+  platform:
+    type: None
+  infraID: ${HOSTED}
+  dns:
+    baseDomain: ${BASEDOMAIN}
+  services:
+  - service: APIServer
+    servicePublishingStrategy:
+      nodePort:
+        address: api.${HOSTED}.${BASEDOMAIN}
+      type: NodePort
+  - service: OAuthServer
+    servicePublishingStrategy:
+      nodePort:
+        address: api.${HOSTED}.${BASEDOMAIN}
+      type: NodePort
+  - service: OIDC
+    servicePublishingStrategy:
+      nodePort:
+        address: api.${HOSTED}.${BASEDOMAIN}
+      type: None
+  - service: Konnectivity
+    servicePublishingStrategy:
+      nodePort:
+        address: api.${HOSTED}.${BASEDOMAIN}
+      type: NodePort
+  - service: Ignition
+    servicePublishingStrategy:
+      nodePort:
+        address: api.${HOSTED}.${BASEDOMAIN}
+      type: NodePort
+EOF
+
+envsubst <<"EOF" | oc apply -f -
+apiVersion: hypershift.openshift.io/v1alpha1
+kind: NodePool
+metadata:
+  name: ${HOSTED}-workers
+  namespace: ${CLUSTERS_NAMESPACE}
+spec:
+  clusterName: ${HOSTED}
+  nodeCount: 0
+  management:
+    autoRepair: false
+    upgradeType: Replace
+  platform:
+    type: None
+  release:
+    image: "quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE_VERSION}-${OCP_ARCH}"
+EOF
+~~~
+
+After a while, a number of pods will be created in the `${CLUSTERS_NAMESPACE}` namespace. Those pods are the control plane of the hosted cluster.
+
+~~~sh
+oc get pods -n ${CLUSTERS_NAMESPACE}
+<insert here>
+~~~
+
+The hosted cluster's kubeconfig can be extracted as:
+
+~~~sh
+oc extract -n ${CLUSTERS_NAMESPACE} secret/${HOSTED}-admin-kubeconfig --to=- > ${HOSTED}-kubeconfig
+oc get clusterversion --kubeconfig=${HOSTED}-kubeconfig
+~~~
+
+##### **Adding a bare metal worker**
+
+* Download the RHCOS live ISO into the httpd server (for example into `/var/www/html/hypershift-none/` on an apache server hosted at www.example.com)
+
+~~~sh
+mkdir -p /var/www/html/hypershift-none/
+curl -s -o /var/www/html/hypershift-none/rhcos-live.x86_64.iso https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.9/4.9.0/rhcos-live.x86_64.iso
+~~~
+
+* Download the ignition generated in the hostedcluster
+
+~~~sh
+curl -s -k -H "Authorization: Bearer $(oc -n clusters-${HOSTED} get secret $(oc -n clusters-${HOSTED} get secret | grep token-${HOSTED}  | awk '{print $1}') -o jsonpath={.data.token})" https://$(oc get node -o wide | grep master | head -1 | awk '{print $6}'):$(oc -n clusters-${HOSTED} get svc ignition-server -o jsonpath={.spec.ports[0].nodePort})/ignition > /var/www/html/hypershift-none/worker.ign
+~~~
+
+* Modify the RHCOS live ISO to install the worker using that ignition file into the `/dev/sda` device (YMMV)
+
+~~~sh
+podman run --rm -it -v /var/www/html/hypershift-none/:/data:z --workdir /data quay.io/coreos/coreos-installer:release iso customize --live-karg-append="coreos.inst.ignition_url=http://www.example.com/hypershift-none/worker.ign coreos.inst.install_dev=/dev/sda" -o ./rhcos.iso ./rhcos-live.x86_64.iso
+podman run --rm -it -v /var/www/html/hypershift-none/:/data:z --workdir /data quay.io/coreos/coreos-installer:release iso kargs show ./rhcos.iso
+chmod a+r /var/www/html/hypershift-none/rhcos.iso
+~~~
+
+* (Optionally) Check the ISO can be downloaded
+
+~~~sh
+curl -v -o rhcos.iso http://www.example.com/hypershift-none/rhcos.iso
+~~~
+
+* Use the ISO as 'virtual media' using `racadm` (in this case, Dell hardware) and boot the server once using the ISO:
+
+~~~sh
+sudo yum install -y sshpass
+
+export IDRACIP=10.19.136.22
+export SSHPASS="xxx"
+export IDRACUSER="root"
+ipmitool -I lanplus -U ${IDRACUSER} -P ${SSHPASS} -H ${IDRACIP} power off
+racadm="sshpass -e ssh -oStrictHostKeyChecking=no ${IDRACUSER}@${IDRACIP} racadm"
+${racadm} remoteimage -d
+${racadm} remoteimage -c -u "foo" -p "bar" -l http://www.example.com/hypershift-none/rhcos.iso
+
+curl -s -L -k https://github.com/dell/iDRAC-Redfish-Scripting/raw/master/Redfish%20Python/SetNextOneTimeBootVirtualMediaDeviceOemREDFISH.py -o SetNextOneTimeBootVirtualMediaDeviceOemREDFISH.py
+python3 ./SetNextOneTimeBootVirtualMediaDeviceOemREDFISH.py -ip ${IDRACIP} -u ${IDRACUSER} -p ${SSHPASS} -d 1 -r y
+~~~
+
+After a while, the worker will be installed.
+
+
+* Sign the CSR:
+
+~~~sh
+oc get csr --kubeconfig=${HOSTED}-kubeconfig -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | xargs oc adm certificate approve --kubeconfig=${HOSTED}-kubeconfig
+~~~
+
+* Then the worker is added to the cluster:
+
+~~~sh
+oc get nodes --kubeconfig=${HOSTED}-kubeconfig
+NAME                                         STATUS   ROLES    AGE   VERSION
+kni1-worker-0.cloud.lab.eng.bos.redhat.com   Ready    worker   28m   v1.22.3+e790d7f
+
+oc get co --kubeconfig=${HOSTED}-kubeconfig
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+console                                    4.9.17    True        False         False      17m     
+csi-snapshot-controller                    4.9.17    True        False         False      24m     
+dns                                        4.9.17    True        False         False      24m     
+image-registry                             4.9.17    False       False         False      4m49s   NodeCADaemonAvailable: The daemon set node-ca does not have available replicas...
+ingress                                    4.9.17    True        False         False      14m     
+kube-apiserver                             4.9.17    True        False         False      3h45m   
+kube-controller-manager                    4.9.17    True        False         False      3h45m   
+kube-scheduler                             4.9.17    True        False         False      3h45m   
+kube-storage-version-migrator              4.9.17    True        False         False      24m     
+monitoring                                           False       True          True       9m      Rollout of the monitoring stack failed and is degraded. Please investigate the degraded status error.
+network                                    4.9.17    True        False         False      25m     
+node-tuning                                4.9.17    True        False         False      24m     
+openshift-apiserver                        4.9.17    True        False         False      3h45m   
+openshift-controller-manager               4.9.17    True        False         False      3h45m   
+openshift-samples                          4.9.17    True        False         False      23m     
+operator-lifecycle-manager                 4.9.17    True        False         False      3h45m   
+operator-lifecycle-manager-catalog         4.9.17    True        False         False      3h45m   
+operator-lifecycle-manager-packageserver   4.9.17    True        False         False      3h45m   
+service-ca                                 4.9.17    True        False         False      25m     
+storage                                    4.9.17    True        False         False      25m     
+
+oc get clusterversion --kubeconfig=${HOSTED}-kubeconfig
+NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
+version             False       True          3h46m   Unable to apply 4.9.17: some cluster operators have not yet rolled out
+~~~
+
+> **NOTE**: Some cluster operators are degraded because there is only a single worker and they require at least 2. However setting the `hostedcluster.spec.infrastructureAvailabilityPolicy: SingleReplica` configuration parameter disables the requirement and will make the clusters operator available with a single worker.
+
+* After adding 2 workers, the hosted cluster is completely available as well as all the cluster operators:
+
+~~~sh
+oc get hostedcluster -n clusters hosted0
+NAME      VERSION   KUBECONFIG                 PROGRESS    AVAILABLE   REASON
+hosted0   4.9.17    hosted0-admin-kubeconfig   Completed   True        HostedClusterAsExpected
+
+KUBECONFIG=./hosted0-kubeconfig oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+console                                    4.9.17    True        False         False      64m     
+csi-snapshot-controller                    4.9.17    True        False         False      71m     
+dns                                        4.9.17    True        False         False      71m     
+image-registry                             4.9.17    True        False         False      11m     
+ingress                                    4.9.17    True        False         False      61m     
+kube-apiserver                             4.9.17    True        False         False      4h32m   
+kube-controller-manager                    4.9.17    True        False         False      4h32m   
+kube-scheduler                             4.9.17    True        False         False      4h32m   
+kube-storage-version-migrator              4.9.17    True        False         False      71m     
+monitoring                                 4.9.17    True        False         False      6m51s   
+network                                    4.9.17    True        False         False      72m     
+node-tuning                                4.9.17    True        False         False      71m     
+openshift-apiserver                        4.9.17    True        False         False      4h32m   
+openshift-controller-manager               4.9.17    True        False         False      4h32m   
+openshift-samples                          4.9.17    True        False         False      70m     
+operator-lifecycle-manager                 4.9.17    True        False         False      4h32m   
+operator-lifecycle-manager-catalog         4.9.17    True        False         False      4h32m   
+operator-lifecycle-manager-packageserver   4.9.17    True        False         False      4h32m   
+service-ca                                 4.9.17    True        False         False      72m     
+storage                                    4.9.17    True        False         False      72m
+
+KUBECONFIG=./hosted0-kubeconfig oc get clusterversion
+NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
+version   4.9.17    True        False         8m42s   Cluster version is 4.9.17
+~~~
