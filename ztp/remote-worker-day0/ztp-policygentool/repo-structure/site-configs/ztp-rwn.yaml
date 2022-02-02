@@ -151,6 +151,7 @@ spec:
         bmcCredentialsName:
           name: "worker-2-ztp"
         bootMACAddress: "de:ad:bb:f3:00:10"
+        ignitionConfigOverride: '{"storage": {"files": [{"path": "/etc/kubernetes/manifests/keepalived.yaml", "contents": {"source": "data:text/plain;base64,e30="}}]}}'
         bootMode: "UEFI"
         rootDeviceHints:
           deviceName: /dev/vda
