@@ -17,7 +17,7 @@ If you want to see how you can deploy a RWN and a SNO with Assisted Installer yo
 
 ### **Prereqs and Patches**
 
-Before deploying the cluster we need to deploy an Assisted Service instance in our Hub cluster, in order to get it deploy we need to create an `AgentServiceConfig` object. You can use the one below (if you do, change the required parameters to match your environment):
+Before deploying the cluster we need to spawn an Assisted Service instance in our Hub cluster, in order to get it deployed we need to create a `AgentServiceConfig` object. You can use the one below (if you do, change the required parameters to match your environment):
 
 ~~~yaml
 apiVersion: agent-install.openshift.io/v1beta1
@@ -86,13 +86,13 @@ Since deploying remote workers as a day0 operation is not supported yet by AI, w
 
 #### **Workarounds**
 
-Since we have a remote worker, we need to take care of the Ingress Operator and make sure that the routers do not fall under that remote worker, in order to do that we add extra manifests where we configure the Ingress Operator so routers run on master nodes. You can see extra manifests [here](./assets/ztp-cluster/06_extra_manifests.yaml)
+Since we have a remote worker, we need to take care of the Ingress Operator and make sure that the routers do not fall under that remote worker, in order to do that we add extra manifests where we configure the Ingress Operator so routers run on master nodes. Another component that we don't want to run on the remote worker is `KeepAliveD`, so we remove the static pod definition using an ignition override at the BMH level and a `MachineConfig` and `MachineConfigPool`. You can see extra manifests [here](./assets/ztp-cluster/06_extra_manifests.yaml)
 
-After cluster is deploy, the routers could be moved to a list of worker matching some labels. 
+After the cluster is deployed, the routers could be moved to a list of workers matching some labels.
 
 #### **Issues we found**
 
-This section describe issues that we have found during the cluster deployments. Since this is not supported some of this issues are expected.
+This section describes issues that we have found during the cluster deployments. Since this is not supported, some of these issues are expected.
 
 **Ingress Operator**
 
@@ -121,7 +121,7 @@ or
 
 You would get error messages similar to:
 
-~~~
+~~~log
 2022-01-19T13:25:22.242Z	ERROR	operator.init.controller-runtime.manager.controller.ingress_controller	controller/controller.go:253	Reconciler error	{"name": "default", "namespace": "openshift-ingress-operator", "error": "failed to ensure deployment: failed to build router deployment: ingresscontroller \"default\" has invalid spec.nodePlacement.nodeSelector: operator \"NotIn\" cannot be converted into the old label selector format", "errorCauses": [{"error": "failed to ensure deployment: failed to build router deployment: ingresscontroller \"default\" has invalid spec.nodePlacement.nodeSelector: operator \"DoesNotExist\" cannot be converted into the old label selector format"}]}
 ~~~
 
@@ -150,6 +150,5 @@ While this approach was tested and worked for UPI deployments, Assisted Installe
 #### **Deployment**
 
 Now that we have the prereqs and patches ready we can run the cluster deployment, we just need to create all objects inside the [assets/ztp-cluster/](./assets/ztp-cluster/) in our Hub cluster.
-
 
 You can see the deployment in action [here](https://drive.google.com/file/d/1yDYMsawPBNgjM3zm9-7ZqSHuiUBrOk2S/view?usp=sharing).

@@ -19,3 +19,47 @@ data:
         nodeSelector:
           matchLabels:
             node-role.kubernetes.io/master: ""
+  98_no_keepalived_static_pod.yaml: |
+    apiVersion: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+    metadata:
+      labels:
+        machineconfiguration.openshift.io/role: remoteworker
+      name: 98-no-keepalived-static-pod
+    spec:
+      config:
+        ignition:
+          config: {}
+          security:
+            tls: {}
+          timeouts: {}
+          version: 3.1.0
+        networkd: {}
+        passwd: {}
+        storage:
+          files:
+          - contents:
+              source: data:text/plain;charset=utf-8;base64,e30=
+            mode: 420
+            overwrite: true
+            path: /etc/kubernetes/manifests/keepalived.yaml
+      osImageURL: ""
+  97_remoteworker_mcp.yaml: |
+    apiVersion: machineconfiguration.openshift.io/v1
+    kind: MachineConfigPool
+    metadata:
+      labels:
+        pools.operator.machineconfiguration.openshift.io/remoteworker: ""
+      name: remoteworker
+    spec:
+      machineConfigSelector:
+        matchExpressions:
+          - key: machineconfiguration.openshift.io/role
+            operator: In
+            values:
+            - remoteworker
+            - worker
+      nodeSelector:
+        matchLabels:
+          kubernetes.io/hostname: openshift-worker-2
+      paused: false
