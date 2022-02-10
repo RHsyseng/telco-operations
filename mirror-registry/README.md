@@ -68,6 +68,13 @@ make build-online-zip
 
 ## **Limitations/Additional Notes**
 
-- It's not possible to specify a different user than init. Opened [https://github.com/quay/mirror-registry/pull/46](https://github.com/quay/mirror-registry/pull/46) to address it
-- IPV6 isnt supported by quay. Opened [https://github.com/quay/mirror-registry/pull/47](https://github.com/quay/mirror-registry/pull/47) to address it by using a side haproxy container
 - the command can also target a remote host, although we didnt see too much benefit to going with such approach.
+- It was not possible to specify a different user than init in the first release. We opened [https://github.com/quay/mirror-registry/pull/46](https://github.com/quay/mirror-registry/pull/46) to address it, which got merged so this will be possible in an upcoming release.
+- IPV6 isn't currently supported by quay. We opened [https://github.com/quay/mirror-registry/pull/47](https://github.com/quay/mirror-registry/pull/47) to address it by using a side haproxy container, but this got closed. For the time beeing, the folder [ipv6](ipv6) contains assets allowing to deploy an extra container in an ipv6 context. This can be deployed with the following instructions:
+
+```
+cp quay_haproxy.cfg /etc/quay-install/haproxy.cfg
+cp quay_haproxy.service /usr/lib/systemd/system
+systemctl daemon-reload
+systemctl enable --now quay-haproxy
+```
