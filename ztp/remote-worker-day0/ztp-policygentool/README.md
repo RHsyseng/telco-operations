@@ -1,4 +1,4 @@
-# **ZTP Remote Worker Nodes at day 0 with Assisted Installer**
+# **ZTP Remote Worker Nodes at day 0 with ZTP and policygentool**
 
 :warning: The work exposed here is not supported in any way by Red Hat, this is the result of exploratory work. Use at your own risk.
 
