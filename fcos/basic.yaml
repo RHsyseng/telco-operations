@@ -4,7 +4,7 @@ passwd:
   users:
     - name: core
       ssh_authorized_keys:
-        - ssh-rsa AAAAB3...
+        - ssh-rsa AAAA...
       groups:
         - qemu
         - libvirt
@@ -15,6 +15,25 @@ passwd:
     - name: libvirt
 systemd:
   units:
+    - name: fix-libvirt-images-permissions.service
+      contents: |
+        [Unit] 
+        Description="Run script to restore permissions"
+
+        [Service]
+        ExecStart=/usr/local/bin/fix-libvirt-images-permissions.sh
+    - name: fix-libvirt-images-permissions.path
+      enabled: true
+      contents: |
+        [Unit]
+        Description="Monitor /var/lib/libvirt/images permissions"
+
+        [Path]
+        PathChanged=/var/lib/libvirt/images
+        Unit=fix-libvirt-images-permissions.service
+
+        [Install]
+        WantedBy=multi-user.target
     # Installing libvirtd and some other packages as a layered package with rpm-ostree
     - name: post-install.service
       enabled: true
@@ -52,6 +71,15 @@ storage:
         inline: |
           [updates]
           enabled = false
+    - path: /usr/local/bin/fix-libvirt-images-permissions.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash
+          USER='core'
+          FOLDER='/var/lib/libvirt/images'
+          chmod 711 ${FOLDER}
+          setfacl -m u:${USER}:rwx "${FOLDER}"
     - path: /etc/pki/ca-trust/source/anchors/2015-RH-IT-Root-CA.pem
       mode: 0644
       contents:
