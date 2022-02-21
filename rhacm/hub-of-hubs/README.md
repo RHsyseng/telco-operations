@@ -98,6 +98,8 @@ The current deployment scripts for Hub of Hubs require of some tooling on the ma
 
 3. After a few moments, the script will finish and your ACM console should look like this:
 
+    > **NOTE**: The ACM HoH console replaces the regular ACM console, so you need to access the regular ACM console endpoint: `oc -n open-cluster-management get route multicloud-console`
+
     ![ACM After HoH](assets/acm-after-hoh.png)
 
 ### **HoH Agent Deployment**
