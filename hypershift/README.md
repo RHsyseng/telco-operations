@@ -13,5 +13,5 @@ as well as in the [HyperShift GitHub repository](https://github.com/openshift/hy
 
 This folder contains different documents to get Hypershift up and running on different platforms.
 
-* [HyperShift + Kubevirt](./kubevirt/kubevirt.md)
+* [HyperShift + Kubevirt](./kubevirt/README.md)
 * [HyperShift + Bare Metal workers using 'none' provider](./baremetal/none.md)
