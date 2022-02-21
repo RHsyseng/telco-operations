@@ -12,6 +12,8 @@ libvirt packages and some other goodies such as:
 * Disable zincati to avoid rebooting the server when an update is applied
 * Adding the Red Hat certificate to the OS trust store
 * Create a fancy alias for all users (to run [`kcli`](https://kcli.readthedocs.io/en/latest/) commands in a toolbox container)
+* Create a systemd-path to prevent modifications to the `/var/lib/libvirt/images`
+folder permissions when updated
 * Run a user systemd unit to perform some post installation tasks
 
 ## Download the ISO
