@@ -9,7 +9,10 @@ libvirt packages and some other goodies such as:
 * Configure a `baremetal` bridge using NetworkManager files
 * Set the default editor to vim
 * Configure the timezone
-* Create a fancy alias for all users (to run [`kcli`](https://kcli.readthedocs.io/en/latest/) commands in a container)
+* Disable zincati to avoid rebooting the server when an update is applied
+* Adding the Red Hat certificate to the OS trust store
+* Create a fancy alias for all users (to run [`kcli`](https://kcli.readthedocs.io/en/latest/) commands in a toolbox container)
+* Run a user systemd unit to perform some post installation tasks
 
 ## Download the ISO
 
@@ -56,13 +59,13 @@ $ ls -l fedora*
 to install a Fedora CoreOS system. It is basically a (yet another) yaml file where to
 declare user settings, filesystem layout, folder structure, custom systemd units, etc.
 
-The [basic.butane](basic.butane) included shows some of those things in action. The trickier
+The [basic.yaml](basic.yaml) file included shows some of those things in action. The trickier
 part is the `rpm-ostree` installation of the overlayed packages, in this case libvirtd and some
 other friends. In order to do that, we created a custom systemd unit that runs once and
 does the layering automatically... as well as some other stuff required to allow the `core`
 user to run virsh commands.
 
-> **NOTE**: There are a few things that probably can be done in a better way in that basic.butane file...
+> **NOTE**: There are a few things that probably can be done in a better way in that butane file...
 
 The [butane specificiation](https://coreos.github.io/butane/config-fcos-v1_4/) and the
 [butane examples](https://coreos.github.io/butane/examples/) explain in good detail all the
@@ -174,24 +177,14 @@ Once it finishes, the system is ready to be used!
 
 ## Post install workarounds
 
-There are a few things we need to be workarounded as of today in our configuration:
-
-* The `~/.kcli` folder is not created, so it needs to be manually created:
+After all the post-installation tasks, a reboot is required:
 
 ```
-$ mkdir -p ~/.kcli
-```
-
-* The `setfact` command doesn't seem to be properly applied the first time, so it is needed to be
-executed a second time:
-
-```
-$ sudo setfacl -m u:core:rwx /var/lib/libvirt/images
+$ sudo reboot
 ```
 
 ## To Do
 
-* Disable zincati to avoid potential issues when rebooting the host?
-* Why the `setfact` command is needed a second time?
-* How to prepopulate the user container images?
+* [Reboot once post ignition?](https://discussion.fedoraproject.org/t/reboot-once-post-ignition-in-fedora-coreos/37107)
+* [Nested directories issue?](https://discussion.fedoraproject.org/t/fedora-coreos-ignition-nested-directories-and-permissions-issue/37010)
 * [Why creating a folder in `/etc/skel` via ignition is ignored for the `core` user?](https://discussion.fedoraproject.org/t/etc-skel-not-used-for-core-user-in-fedora-coreos/36973)

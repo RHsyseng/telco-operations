@@ -1,0 +1,202 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3...
+      groups:
+        - qemu
+        - libvirt
+  groups:
+    # From rpm -q libvirt-daemon-driver-qemu --scripts and libvirt-daemon
+    - name: qemu
+      gid: 107
+    - name: libvirt
+systemd:
+  units:
+    # Installing libvirtd and some other packages as a layered package with rpm-ostree
+    - name: post-install.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Post installation tasks
+        Wants=network-online.target
+        After=network-online.target
+        # We run before `zincati.service` to avoid conflicting rpm-ostree
+        # transactions.
+        Before=zincati.service
+        ConditionPathExists=!/var/lib/%N.stamp
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        # `--allow-inactive` ensures that rpm-ostree does not return an error
+        # if the package is already installed. This is useful if the package is
+        # added to the root image in a future Fedora CoreOS release as it will
+        # prevent the service from failing.
+        ExecStart=/usr/bin/rpm-ostree install --apply-live --allow-inactive vim tmux libvirt libvirt-daemon-driver-qemu qemu-kvm
+        ExecStart=/usr/bin/systemctl enable libvirtd --now
+        ExecStart=/usr/sbin/usermod -aG libvirt,kvm,qemu core
+        ExecStart=/usr/bin/mkdir -p /var/lib/libvirt/images
+        ExecStart=/usr/bin/virsh pool-define-as --name default --type dir --target /var/lib/libvirt/images
+        ExecStart=/usr/bin/setfacl -m u:core:rwx /var/lib/libvirt/images
+        ExecStart=/bin/touch /var/lib/%N.stamp
+
+        [Install]
+        WantedBy=multi-user.target
+storage:
+  files:
+    - path: /etc/zincati/config.d/90-disable-auto-updates.toml
+      contents:
+        inline: |
+          [updates]
+          enabled = false
+    - path: /etc/pki/ca-trust/source/anchors/2015-RH-IT-Root-CA.pem
+      mode: 0644
+      contents:
+        inline: |
+          -----BEGIN CERTIFICATE-----
+          MIIENDCCAxygAwIBAgIJANunI0D662cnMA0GCSqGSIb3DQEBCwUAMIGlMQswCQYD
+          VQQGEwJVUzEXMBUGA1UECAwOTm9ydGggQ2Fyb2xpbmExEDAOBgNVBAcMB1JhbGVp
+          Z2gxFjAUBgNVBAoMDVJlZCBIYXQsIEluYy4xEzARBgNVBAsMClJlZCBIYXQgSVQx
+          GzAZBgNVBAMMElJlZCBIYXQgSVQgUm9vdCBDQTEhMB8GCSqGSIb3DQEJARYSaW5m
+          b3NlY0ByZWRoYXQuY29tMCAXDTE1MDcwNjE3MzgxMVoYDzIwNTUwNjI2MTczODEx
+          WjCBpTELMAkGA1UEBhMCVVMxFzAVBgNVBAgMDk5vcnRoIENhcm9saW5hMRAwDgYD
+          VQQHDAdSYWxlaWdoMRYwFAYDVQQKDA1SZWQgSGF0LCBJbmMuMRMwEQYDVQQLDApS
+          ZWQgSGF0IElUMRswGQYDVQQDDBJSZWQgSGF0IElUIFJvb3QgQ0ExITAfBgkqhkiG
+          9w0BCQEWEmluZm9zZWNAcmVkaGF0LmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEP
+          ADCCAQoCggEBALQt9OJQh6GC5LT1g80qNh0u50BQ4sZ/yZ8aETxt+5lnPVX6MHKz
+          bfwI6nO1aMG6j9bSw+6UUyPBHP796+FT/pTS+K0wsDV7c9XvHoxJBJJU38cdLkI2
+          c/i7lDqTfTcfLL2nyUBd2fQDk1B0fxrskhGIIZ3ifP1Ps4ltTkv8hRSob3VtNqSo
+          GxkKfvD2PKjTPxDPWYyruy9irLZioMffi3i/gCut0ZWtAyO3MVH5qWF/enKwgPES
+          X9po+TdCvRB/RUObBaM761EcrLSM1GqHNueSfqnho3AjLQ6dBnPWlo638Zm1VebK
+          BELyhkLWMSFkKwDmne0jQ02Y4g075vCKvCsCAwEAAaNjMGEwHQYDVR0OBBYEFH7R
+          4yC+UehIIPeuL8Zqw3PzbgcZMB8GA1UdIwQYMBaAFH7R4yC+UehIIPeuL8Zqw3Pz
+          bgcZMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgGGMA0GCSqGSIb3DQEB
+          CwUAA4IBAQBDNvD2Vm9sA5A9AlOJR8+en5Xz9hXcxJB5phxcZQ8jFoG04Vshvd0e
+          LEnUrMcfFgIZ4njMKTQCM4ZFUPAieyLx4f52HuDopp3e5JyIMfW+KFcNIpKwCsak
+          oSoKtIUOsUJK7qBVZxcrIyeQV2qcYOeZhtS5wBqIwOAhFwlCET7Ze58QHmS48slj
+          S9K0JAcps2xdnGu0fkzhSQxY8GPQNFTlr6rYld5+ID/hHeS76gq0YG3q6RLWRkHf
+          4eTkRjivAlExrFzKcljC4axKQlnOvVAzz+Gm32U0xPBF4ByePVxCJUHw1TsyTmel
+          RxNEp7yHoXcwn+fXna+t5JWh1gxUZty3
+          -----END CERTIFICATE-----
+    - path: /etc/NetworkManager/system-connections/baremetal.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=baremetal
+          type=bridge
+          interface-name=baremetal
+          [bridge]
+          [ipv4]
+          dns-search=
+          may-fail=false
+          method=auto
+    - path: /etc/NetworkManager/system-connections/baremetal-slave-eno1.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=baremetal-slave-eno1
+          type=ethernet
+          interface-name=eno1
+          master=baremetal
+          slave-type=bridge
+          [bridge-port]
+    # Set vim as default editor
+    # We use `zz-` as prefix to make sure this is processed last in order to
+    # override any previously set defaults.
+    - path: /etc/profile.d/zz-default-editor.sh
+      overwrite: true
+      contents:
+        inline: |
+          #/bin/sh
+          export EDITOR=vim
+    - path: /etc/profile.d/zz-kcli-alias.sh
+      overwrite: true
+      contents:
+        inline: |
+          #/bin/sh
+          alias kcli="toolbox run kcli"
+    - path: /etc/polkit-1/localauthority/50-local.d/polkit.pkla 
+      contents:
+        inline: |
+          [Allow core libvirt monitor permissions]
+          Identity=unix-user:core
+          Action=org.libvirt.unix.monitor
+          ResultAny=yes
+          ResultInactive=yes
+          ResultActive=yes
+    - path: /var/lib/systemd/linger/core
+      mode: 0644
+    - path: /home/core/.config/systemd/user/post-install-user.service
+      mode: 0755
+      contents:
+        inline: |
+          [Unit]
+          Description=Post installation tasks as core user
+          Wants=network-online.target
+          After=network-online.target
+          ConditionPathExists=!/home/core/.%N.stamp
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStart=/bin/mkdir -p ${HOME}/bin
+          ExecStart=/bin/mkdir -p ${HOME}/.kcli
+          ExecStart=/usr/bin/podman pull registry.fedoraproject.org/fedora-toolbox:35
+          ExecStart=/usr/bin/toolbox create
+          ExecStart=/usr/bin/toolbox run sudo dnf -y copr enable karmab/kcli
+          ExecStart=/usr/bin/toolbox run sudo dnf -y install kcli tmux libvirt-client vim
+          ExecStart=/usr/bin/toolbox run sudo dnf -y update
+          ExecStart=/bin/touch /home/core/.%N.stamp
+      user:
+        name: core
+      group:
+        name: core
+    #- path: /usr/local/bin/oc
+    #  overwrite: true
+    #  contents:
+    #    source: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+    #    compression: gzip
+    #    verification:
+    #      hash: sha256-2895de3bb4a9d9a68aa6e48c06ffaed21f81c7341a78e81fddd7c50eaca08c1b
+    #  mode: 0755
+  directories:
+    - path: /home/core/.config
+      mode: 0755
+      user:
+        name: core
+      group:
+        name: core
+    - path: /home/core/.config/systemd
+      mode: 0755
+      user:
+        name: core
+      group:
+        name: core
+    - path: /home/core/.config/systemd/user
+      mode: 0755
+      user:
+        name: core
+      group:
+        name: core
+    - path: /home/core/.config/systemd/user/default.target.wants
+      mode: 0755
+      user:
+        name: core
+      group:
+        name: core
+  links:
+    - path: /etc/localtime
+      target: ../usr/share/zoneinfo/Europe/Madrid
+      hard: false
+    - path: /home/core/.config/systemd/user/default.target.wants/post-install-user.service
+      user:
+        name: core
+      group:
+        name: core
+      target: /home/core/.config/systemd/user/post-install-user.service
+      hard: false
