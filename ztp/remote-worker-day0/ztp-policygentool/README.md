@@ -9,14 +9,7 @@ The information here asumes you have followed [this other document](../ztp-ai/RE
 * OpenShift Cluster acting as Hub (We tested with 4.9.12)
 * RH ACM (We tested with 2.4)
 * Hardware with RedFish support (We virtualized hardware with KVM and emulated RedFish with SushyTools)
-* OpenShift GitOps Operator deployed (CSV openshift-gitops-operator.v1.3.2 required due to this [issue](https://coreos.slack.com/archives/C027GN8TJSW/p1643221475013500))
-
-    ~~~yaml
-    # Pin to 1.3.2 release
-    startingCSV: openshift-gitops-operator.v1.3.2
-    installPlanApproval: Manual 
-    ~~~
-
+* OpenShift GitOps Operator deployed 
 * ZTP PolicyGenTool (We tested with v4.10)
 
 ## **Deployment**
@@ -45,8 +38,6 @@ We followed the [deployment steps](https://github.com/openshift-kni/cnf-features
     ~~~sh
     # Patch the ArgoCD instance
     oc patch argocd openshift-gitops -n openshift-gitops --patch-file argocd/deployment/argocd-openshift-gitops-patch.json --type=merge
-    # Patch the openshift-gitops-repo-server Deployment
-    oc patch deployment openshift-gitops-repo-server -n openshift-gitops --patch-file argocd/deployment/deployment-openshift-repo-server-patch.json
     ~~~
 4. Create the repo structure, you can use the [example folder](https://github.com/openshift-kni/cnf-features-deploy/tree/master/ztp/gitops-subscriptions/argocd/example) as inspiration. You can check the structure we created [here](./repo-structure) as well. You need to fill the details for your environments on the different files.
 5. Access the Argo CD UI and add your git repository under `Settings -> Repositories`
