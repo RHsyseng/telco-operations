@@ -152,3 +152,171 @@ While this approach was tested and worked for UPI deployments, Assisted Installe
 Now that we have the prereqs and patches ready we can run the cluster deployment, we just need to create all objects inside the [assets/ztp-cluster/](./assets/ztp-cluster/) in our Hub cluster.
 
 You can see the deployment in action [here](https://drive.google.com/file/d/1yDYMsawPBNgjM3zm9-7ZqSHuiUBrOk2S/view?usp=sharing).
+
+### **Ingress and Egress on the Remote Worker Node**
+
+**Ingress**
+
+* OpenShift Router/s running on the master/non-remote worker node/s:
+  
+  * Ingress to applications running on the remote worker node works just fine. This is expected since the routers are running on the master nodes and from there connection to the remote worker node will happen at SDN level.
+
+    ![Ingress non-rwn](assets/diagrams/ingress-non-rwn.png)
+
+* OpenShift Router/s running on the remote worker node/s:
+
+  * Default ingress controller on remote worker node/s:
+
+    * The remote node doesn't have an interface on the network where the IngressVIP is located, and as such, if you try to move ingress there the router pod will start and br-ex will configure the IngressVIP, but ingress will be broken since traffic cannot be properly routed.
+
+  * Sharded ingress on remote node:
+
+    * We configured a sharded ingress controller ([official docs](https://docs.openshift.com/container-platform/4.9/networking/ingress-operator.html#nw-ingress-sharding_configuring-ingress)). The configuration for this ingress controller looks like this:
+
+      ~~~yaml
+      apiVersion: operator.openshift.io/v1
+      kind: IngressController
+      metadata:
+        name: rwn
+        namespace: openshift-ingress-operator
+      spec:
+        replicas: 1
+        domain: apps-rwn.ztp.e2e.bos.redhat.com
+        nodePlacement:
+          nodeSelector:
+            matchLabels:
+              kubernetes.io/hostname: "openshift-worker-2.ztp.e2e.bos.redhat.com"
+        routeSelector:
+          matchLabels:
+            type: rwn-route
+      ~~~
+
+    * Since we need to route traffic to our new domain `apps-rwn.ztp.e2e.bos.redhat.com`, we deployed an external HAProxy that redirects connections to the remote worker node/s where the routers for this domain are running.
+
+    * We labeled our OpenShift Routes targetting apps running on remote worker nodes with the label `type: rwn-route` and then the traffic was handled by the OpenShift router running on the remote worker node and the app was accessed successfully.
+
+      ![Ingress sharded rwn](assets/diagrams/ingress-sharded-rwn.png)
+
+**Egress**
+
+* **Egress IP from non-RWN machineNetwork for apps running on RWN:**
+
+  * First, we need to label the RWN with `k8s.ovn.org/egress-assignable: ""`
+
+    ~~~sh
+    oc label node openshift-worker-2.ztp.e2e.bos.redhat.com k8s.ovn.org/egress-assignable=""
+    ~~~
+
+  * Next we need to create the `EgressIP` configuration:
+
+    ~~~yaml
+    apiVersion: k8s.ovn.org/v1
+    kind: EgressIP
+    metadata:
+      name: egressips-rwn
+    spec:
+      egressIPs:
+      - 10.19.3.50
+      namespaceSelector:
+        matchLabels:
+          type: rwn
+    ~~~
+
+  * We will see that the EgressIP cannot be configured on the remote worker since the node's br-ex interface is not connected to the network where the egressIP lives in.
+
+  * In order to overcome the above issue, we can label a different node (non-rwn) with the `egress-assignable` label, and then we will be able to host that IP somewhere:
+
+    ~~~sh
+    oc label node openshift-worker-0.ztp.e2e.bos.redhat.com k8s.ovn.org/egress-assignable=""
+    ~~~
+
+  * Once we get the EgressIP configured we can run a connection from a pod running on a namespace labeled with the label `type: rwn` and scheduled in the RWN, and we will see we connect using the egressIP:
+
+    > **NOTE**: 10.19.3.46 is an IP from the default machine network. 10.19.142.255 is an IP from the RWN network.
+
+    ~~~sh
+    $ curl http://10.19.3.46:8000
+    $ curl http://10.19.142.255:8000
+    ~~~
+
+    > **NOTE**: These are the logs from the HTTP server we're accessing, we can see source IP 10.19.3.50 (the one configured as egressIP)
+
+    ~~~log
+    10.19.3.50 - - [28/Feb/2022 17:25:43] "GET / HTTP/1.1" 200 -
+    10.19.3.50 - - [28/Feb/2022 17:26:10] "GET / HTTP/1.1" 200 -
+    ~~~
+
+  * The traffic will be routed through the non-RWN node in this case.
+
+      ![Egress from default machine network app running on RWN](assets/diagrams/egress-def-machinenetwork-rwn-app.png)
+
+* **Egress IP from RWN machineNetwork for apps running on RWN**
+
+  * For this test we need to remove the label we added previously:
+
+    ~~~sh
+    oc label node openshift-worker-0.ztp.e2e.bos.redhat.com k8s.ovn.org/egress-assignable-
+    ~~~
+
+  * And remove the egressIP:
+
+    ~~~sh
+    oc delete egressip egressips-rwn
+    ~~~
+
+  * Now we create the egressIP with an IP from the RWN network range:
+
+    ~~~yaml
+    apiVersion: k8s.ovn.org/v1
+    kind: EgressIP
+    metadata:
+      name: egressips-rwn
+    spec:
+      egressIPs:
+      - 10.19.142.253
+      namespaceSelector:
+        matchLabels:
+          type: rwn
+    ~~~
+
+  * Once we get the EgressIP configured we can run a connection from a pod running on a namespace labeled with the label `type: rwn` and scheduled in the RWN, and we will see we connect using the egressIP:
+
+    > **NOTE**: 10.19.3.46 is an IP from the default machine network. 10.19.142.255 is an IP from the RWN network.
+
+    ~~~sh
+    $ curl http://10.19.3.46:8000
+    $ curl http://10.19.142.255:8000
+    ~~~
+
+    > **NOTE**: These are the logs from the HTTP server we're accessing, we can see source IP 10.19.142.253 (the one configured as egressIP)
+
+    ~~~log
+    10.19.142.253 - - [28/Feb/2022 17:31:48] "GET / HTTP/1.1" 200 -
+    10.19.142.253 - - [28/Feb/2022 17:31:51] "GET / HTTP/1.1" 200 -
+    ~~~
+
+  * The traffic will be routed through the RWN node in this case.
+
+      ![Egress from RWN machine network app running on RWN](assets/diagrams/egress-rwn-machinenetwork-rwn-app.drawio.png)
+
+* **Egress IP from RWN machineNetwork for apps running on non-RWN**
+
+  * We can run a connection from a pod running on a namespace labeled with the label `type: rwn` and scheduled in a non-RWN node, and we will see we connect using the egressIP:
+
+    > **NOTE**: 10.19.3.46 is an IP from the default machine network. 10.19.142.255 is an IP from the RWN network.
+
+    ~~~sh
+    $ curl http://10.19.3.46:8000
+    $ curl http://10.19.142.255:8000
+    ~~~
+
+    > **NOTE**: These are the logs from the HTTP server we're accessing, we can see source IP 10.19.142.253 (the one configured as egressIP)
+
+    ~~~log
+    10.19.142.253 - - [28/Feb/2022 17:35:29] "GET / HTTP/1.1" 200 -
+    10.19.142.253 - - [28/Feb/2022 17:35:33] "GET / HTTP/1.1" 200 -
+    ~~~
+
+  * The traffic will be routed through the RWN node in this case.
+  
+      ![Egress from RWN machine network app running on non-RWN](assets/diagrams/egress-rwn-machinenetwork-non-rwn-app.drawio.png)
