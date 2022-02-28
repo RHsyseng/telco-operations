@@ -161,6 +161,8 @@ You can see the deployment in action [here](https://drive.google.com/file/d/1yDY
   
   * Ingress to applications running on the remote worker node works just fine. This is expected since the routers are running on the master nodes and from there connection to the remote worker node will happen at SDN level.
 
+    ![Ingress non-rwn](assets/diagrams/ingress-non-rwn.png)
+
 * OpenShift Router/s running on the remote worker node/s:
 
   * Default ingress controller on remote worker node/s:
@@ -193,11 +195,13 @@ You can see the deployment in action [here](https://drive.google.com/file/d/1yDY
 
     * We labeled our OpenShift Routes targetting apps running on remote worker nodes with the label `type: rwn-route` and then the traffic was handled by the OpenShift router running on the remote worker node and the app was accessed successfully.
 
+      ![Ingress sharded rwn](assets/diagrams/ingress-sharded-rwn.png)
+
 **Egress**
 
 * **Egress IP from non-RWN machineNetwork for apps running on RWN:**
 
-  * First, we need to label the RWN with k8s.ovn.org/egress-assignable: ""
+  * First, we need to label the RWN with `k8s.ovn.org/egress-assignable: ""`
 
     ~~~sh
     oc label node openshift-worker-2.ztp.e2e.bos.redhat.com k8s.ovn.org/egress-assignable=""
@@ -243,6 +247,8 @@ You can see the deployment in action [here](https://drive.google.com/file/d/1yDY
     ~~~
 
   * The traffic will be routed through the non-RWN node in this case.
+
+      ![Egress from default machine network app running on RWN](assets/diagrams/egress-def-machinenetwork-rwn-app.png)
 
 * **Egress IP from RWN machineNetwork for apps running on RWN**
 
@@ -291,6 +297,8 @@ You can see the deployment in action [here](https://drive.google.com/file/d/1yDY
 
   * The traffic will be routed through the RWN node in this case.
 
+      ![Egress from RWN machine network app running on RWN](assets/diagrams/egress-rwn-machinenetwork-rwn-app.drawio.png)
+
 * **Egress IP from RWN machineNetwork for apps running on non-RWN**
 
   * We can run a connection from a pod running on a namespace labeled with the label `type: rwn` and scheduled in a non-RWN node, and we will see we connect using the egressIP:
@@ -311,3 +319,4 @@ You can see the deployment in action [here](https://drive.google.com/file/d/1yDY
 
   * The traffic will be routed through the RWN node in this case.
   
+      ![Egress from RWN machine network app running on non-RWN](assets/diagrams/egress-rwn-machinenetwork-non-rwn-app.drawio.png)
