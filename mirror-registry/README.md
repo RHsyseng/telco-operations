@@ -78,3 +78,70 @@ cp quay_haproxy.service /usr/lib/systemd/system
 systemctl daemon-reload
 systemctl enable --now quay-haproxy
 ```
+
+## **Mirroring content with `oc-mirror`**
+
+One of the main use cases of a mirror registry is enabling OpenShift disconnected installs. There is a new tool that will be released soon that will simplify the way we do OCP mirrors.
+
+:warning: The information below makes use of unreleased software, and as such, it's not supported. What works today may or may not work tomorrow.
+
+### **Building the tool**
+
+As we mentioned, the tool is still not released and as such we need to build it ourselves.
+
+1. Clone the git repo
+
+    ~~~sh
+    git clone https://github.com/openshift/oc-mirror.git
+    cd oc-mirror/
+    ~~~
+
+2. Run the build script and copy the resulting binary to a location withing the PATH
+
+    ~~~sh
+    ./hack/build.sh
+    sudo cp ./bin/oc-mirror /usr/local/bin/
+    ~~~
+
+### **Configuring the mirror config file**
+
+The tool uses a `yaml` configuration file where you describe what you want to mirror, you have several examples in [the repository](https://github.com/openshift/oc-mirror/tree/main/docs/examples).
+
+Our configuration file looks as follows:
+
+~~~yaml
+apiVersion: mirror.openshift.io/v1alpha2
+kind: ImageSetConfiguration
+storageConfig:
+  registry:
+    imageURL: mavazque-virt.cloud.lab.eng.bos.redhat.com:8443/ocp4/openshift4 # Registry where we will mirror the images
+    skipTLS: true
+mirror:
+  ocp: # OCP Releases we want to mirror
+    channels:
+      - name: stable-4.9
+        minVersion: 4.9.21
+        maxVersion: 4.9.21
+  operators: # Operators we want to mirror
+    - catalog: registry.redhat.io/redhat/redhat-operator-index:v4.9 # References entire catalog
+      headsOnly: false # References latest version of each operator in catalog (true is the default value and can be omitted)
+      packages:
+        - name: local-storage-operator
+          channels:
+            - name: 'stable'
+        - name: advanced-cluster-management
+          channels:
+            - name: "release-2.4"
+~~~
+
+### **Running the mirroring**
+
+Now that we have the config file ready we just need to run the mirror command. This command expects the user to be logged in the different registries that will be used. If you have a pull secret you can get it copied to `${XDG_RUNTIME_DIR}/containers/auth.json`, and it will be consumed by the tool.
+
+~~~sh
+/usr/bin/cp -f pull_secret.json ${XDG_RUNTIME_DIR}/containers/auth.json
+
+oc-mirror --config imageset-config.yaml docker://mavazque-virt.cloud.lab.eng.bos.redhat.com:8443 --dest-skip-tls
+~~~
+
+After a while we will have the content mirrored on our Quay registry!
