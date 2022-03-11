@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dns-app-tests
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-app
+  namespace: dns-app-tests
+  labels:
+    app: dns-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns-app
+  template:
+    metadata:
+      labels:
+        app: dns-app
+    spec:
+      containers:
+      - name: dns-app
+        image: quay.io/mavazque/dnsresolv:latest
+        ports:
+        - containerPort: 9999
+          name: http
+        env:
+        - name: RESOLV_ROUTINES
+          value: "10"
+        - name: WAIT_INTERVAL
+          value: "2"
+        - name: RESOLV_TIMEOUT
+          value: "2"
+        - name: RESOLV_DOMAIN
+          value: "kubernetes.default.svc"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dns-app
+  name: dns-app
+  namespace: dns-app-tests
+spec:
+  ports:
+  - port: 9999
+    protocol: TCP
+    targetPort: http
+    name: http
+  selector:
+    app: dns-app
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dns-app
+  namespace: dns-app-tests
+spec:
+  port:
+    targetPort: 9999
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: "Service"
+    name: dns-app
+    weight: 100
