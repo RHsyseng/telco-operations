@@ -1,7 +1,0 @@
-This directory contains Dockerfile and source code for the picofish tool used to workaround supermicro redfish limitations
-
-## How to run
-
-```
-podman run -p 9000:9000 -e HOST=10.19.110.8 -e USERNAME=ADMIN -e PASSWORD=ADMIN quay.io/karmab/picofish
-```
