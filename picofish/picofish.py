@@ -36,7 +36,7 @@ port = int(config['PORT']) if 'PORT' in list(config) else 9000
 
 
 @app.route("/redfish/v1/Managers/1/VM1/CfgCD/Actions/IsoConfig.Mount", methods=["POST"])
-def patch_iso(endpoint):
+def patch_iso():
     body = request.get_json()
     image = body['Image']
     p = urlparse(image)
