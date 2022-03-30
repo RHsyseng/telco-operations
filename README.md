@@ -24,6 +24,7 @@
 * [mirror-registry](./mirror-registry/README.md)
 * [OPA](./opa/README.md)
 * [RHACM](./rhacm/README.md)
+* [SNO](./sno/README.md)
 * [ZTP](./ztp/README.md)
 
 ## Labs
