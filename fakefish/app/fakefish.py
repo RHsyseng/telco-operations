@@ -60,6 +60,10 @@ def system_resource():
 
                return '', 204
 
+@app.route('/redfish/v1/Systems/1/EthernetInterfaces', methods=['GET'])
+def manage_interfaces():
+    return flask.render_template('fake_interfaces.json')
+
 @app.route('/redfish/v1/Managers/1', methods=['GET'])
 def manager_resource():
     return flask.render_template(
