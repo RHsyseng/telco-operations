@@ -1,6 +1,6 @@
 # **Kyverno Policies on RHACM**
 
-This is the result of an exploratory spike around using Kyverno in RHACM Policies and what gaps exist between RHACM and Kyverno policy engines.
+This is the result of an exploratory spike around using Kyverno vs RHACM Policies and what gaps exist between RHACM and Kyverno policy engines.
 
 ## **Deploying Kyverno**
 
