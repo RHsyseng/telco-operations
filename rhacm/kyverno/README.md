@@ -67,7 +67,7 @@ The following filters can be used:
 
 More information about `match statements` can be found [here](https://kyverno.io/docs/writing-policies/match-exclude/#match-statements).
 
-### **Writing Policies**
+### **Writing Kyverno Policies**
 
 You can find information about writing Kyverno policies [here](https://kyverno.io/docs/writing-policies/).
 
