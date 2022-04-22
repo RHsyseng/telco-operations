@@ -73,7 +73,7 @@ You can find information about writing Kyverno policies [here](https://kyverno.i
 
 The Kyverno community has some pre-defined policies on the project site that can be used right away. You can find them [here](https://kyverno.io/policies).
 
-## **Policies Created as part of the Spike**
+## **Kyverno Policies Created as part of the Spike**
 
 |Policy Name|Policy Type|Description|Link|
 |-----------|-----------|-----------|----|
