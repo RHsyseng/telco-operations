@@ -23,7 +23,7 @@ sudo tar xvfz /tmp/kyverno-cli_v1.6.2_linux_x86_64.tar.gz -C /usr/local/bin/ kyv
 
 Kyverno policies consist of a collection of rules. Each rule has a `match` declaration, an optional exclude declaration, and one of a `validate`, `mutate`, `generate`, or `verifyImages` declaration. Each rule can contain only a single `validate`, `mutate`, `generate`, or `verifyImages` declaration.
 
-### **Applying Policies**
+### **Applying Kyverno Policies**
 
 Policies can be applied in-cluster or outside the cluster. For cluster policies we have two types: `Policies` and `ClusterPolicies`:
 
