@@ -1,0 +1,49 @@
+#n order for Kyverno to generate a new RoleBinding or ClusterRoleBinding resource, its ServiceAccount must first be bound to the same Role or ClusterRole which you’re attempting to generate. If this is not done, Kubernetes blocks the request because it sees a possible privilege escalation attempt from the Kyverno ServiceAccount. This is not a Kyverno function but rather how Kubernetes RBAC is designed to work.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kyverno:generate-argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-admin
+subjects:
+- kind: ServiceAccount
+  name: kyverno-service-account
+  namespace: kyverno
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-argocd-clusterrolebinding
+  annotations:
+    policies.kyverno.io/title: Add ArgoCD Rolebinding
+    policies.kyverno.io/category: Multi-Tenancy
+    policies.kyverno.io/subject: ClusterRoleBinding
+    policies.kyverno.io/description: >-
+      When a user from Team1 creates a NS a ClusterRoleBinding gets created so
+      it can access ArgoCD.
+spec:
+  rules:
+  - name: generate-clusterrolebinding
+    match:
+      any:
+      - resources:
+          kinds:
+            - Namespace
+        subjects:
+        - kind: Group
+          name: "team1"
+    generate:
+      kind: ClusterRoleBinding
+      name: "{{request.object.metadata.name}}-team1-argocdaccess"
+      synchronize: true
+      data:
+        subjects:
+        - kind: Group
+          name: team1
+          apiGroup: rbac.authorization.k8s.io
+        roleRef:
+          kind: ClusterRole
+          name: argo-admin
+          apiGroup: rbac.authorization.k8s.io

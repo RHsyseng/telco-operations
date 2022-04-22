@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: Policy
+metadata:
+  name: approve-installplan
+  namespace: <changeme>
+  annotations:
+    policies.kyverno.io/title: Approves install plans created in the namespace where this policy gets created
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+    kyverno.io/kyverno-version: 1.6.2
+    policies.kyverno.io/minversion: 1.6.0
+    kyverno.io/kubernetes-version: "1.23"
+    policies.kyverno.io/subject: Group
+    policies.kyverno.io/description: >-
+      Approves install plans created in the namespace where this policy gets created
+spec:
+  background: true
+  rules:
+  - name: approve-installplan
+    match:
+      any:
+      - resources:
+          kinds:
+            - InstallPlan
+    mutate:
+      patchStrategicMerge:
+        spec:
+          approved: true
+        metadata:
+          labels:
+            "approved-by": "kyverno-approve-installplan" 

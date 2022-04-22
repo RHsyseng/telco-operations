@@ -1,0 +1,33 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: team-approve-subscriptions
+  annotations:
+    policies.kyverno.io/title: Approves subscriptions created by team group members
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+    kyverno.io/kyverno-version: 1.6.2
+    policies.kyverno.io/minversion: 1.6.0
+    kyverno.io/kubernetes-version: "1.23"
+    policies.kyverno.io/subject: Group
+    policies.kyverno.io/description: >-
+      Approves subscriptions created by team1 group members
+spec:
+  background: true
+  rules:
+  - name: approve-subscription
+    match:
+      any:
+      - resources:
+          kinds:
+            - operators.coreos.com/v1alpha1/Subscription
+        subjects:
+        - kind: Group
+          name: "team1"
+    mutate:
+      patchStrategicMerge:
+        spec:
+          installPlanApproval: Automatic
+        metadata:
+          labels:
+            "approved-by": "kyverno-approve-subscription" 
