@@ -34,7 +34,7 @@ Outside the cluster we can use the [Kyverno CLI to do a dry-run](https://kyverno
 
 One thing that you want to keep in mind is that before the validations happen, all the mutating rules across all policies will be executed first.
 
-### **Policies Configuration**
+### **Kyverno Policies Configuration**
 
 **Common Settings**
 
