@@ -83,7 +83,7 @@ The Kyverno community has some pre-defined policies on the project site that can
 |`team-approve-subscriptions`|Mutate|Whenever a subscription is created by a member in team1, the approval strategy will be set to automatic.|[v1](./assets/autoapprove-team1-subscriptions.yaml)|
 |`approve-installplan`|Mutate|Whenever a installplan is created in the namespace where the policy exist, it will be approved automatically. Inspired by [this issue](https://github.com/stolostron/policy-collection/issues/256).|[v1](./assets/autoapprove-installplans-in-namespace.yaml)|
 
-## Gaps in ACM
+## Current gaps in ACM vs Kyverno
 
 * Deleting the policy doesn't delete the content.
 * No way to have policies that rely on webhooks (validate, mutate).
