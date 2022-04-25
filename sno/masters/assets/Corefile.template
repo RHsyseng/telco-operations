@@ -1,0 +1,14 @@
+. {
+    errors
+    health :18080
+    forward . NAMESERVER
+    cache 30
+    reload
+    hosts snoplus.karmalabs.com {
+        192.168.122.253 snoplus-sno snoplus-sno.snoplus.karmalabs.com api-int.snoplus.karmalabs.com api.snoplus.karmalabs.com
+        fallthrough
+    }
+    template ANY ANY apps.snoplus.karmalabs.com {
+       answer "{{ .Name }} A 192.168.122.253"
+    }
+}

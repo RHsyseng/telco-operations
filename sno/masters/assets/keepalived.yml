@@ -1,0 +1,69 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: keepalived
+  namespace: openshift-infra
+  creationTimestamp:
+  deletionGracePeriodSeconds: 65
+  labels:
+    app: kcli-keepalived
+spec:
+  volumes:
+  - name: conf-dir
+    hostPath:
+      path: "/etc/kubernetes"
+  initContainers:
+  - name: fix-keepalived-conf
+    securityContext:
+      privileged: true
+    image: quay.io/karmab/curl:latest
+    command:
+    - "/bin/sh"
+    - "-c"
+    - |
+      #/bin/sh
+      [ ! -f /etc/keepalived/keepalived.conf ] && [ -f /etc/keepalived/keepalived.conf.template ] && cp /etc/keepalived/keepalived.conf.template /etc/keepalived/keepalived.conf
+      grep "192.168.122.253/" /etc/keepalived/keepalived.conf
+      if [ "$?" == "0" ] ; then
+        exit 0
+      else
+        NIC=$(ip r | grep default | head -1 | sed 's/.*dev \(.*\) \(proto\|metric\).*/\1/')
+        NETMASK=$(ip -o -f inet addr show | awk '/scope global/ {print $4}' | head -1 | cut -d'/' -f2)
+        sed -i "s@NIC@$NIC@" /etc/keepalived/keepalived.conf
+        if [ "$NETMASK" != "" ] ; then
+          sed -i "s@192.168.122.253@192.168.122.253/$NETMASK@" /etc/keepalived/keepalived.conf
+        fi
+      fi
+    resources: {}
+    volumeMounts:
+    - name: conf-dir
+      mountPath: "/etc/keepalived"
+    imagePullPolicy: IfNotPresent
+  containers:
+  - name: keepalived
+    securityContext:
+      privileged: true
+    image: quay.io/karmab/origin-keepalived-ipfailover:latest
+    command:
+    - /usr/sbin/keepalived
+    args:
+    - "-f"
+    - "/etc/keepalived/keepalived.conf"
+    - "--dont-fork"
+    - "--vrrp"
+    - "--log-detail"
+    - "--log-console"
+    resources:
+      requests:
+        cpu: 150m
+        memory: 2048Mi
+    volumeMounts:
+    - name: conf-dir
+      mountPath: "/etc/keepalived"
+    terminationMessagePolicy: FallbackToLogsOnError
+    imagePullPolicy: IfNotPresent
+  hostNetwork: true
+  tolerations:
+  - operator: Exists
+  priorityClassName: system-node-critical

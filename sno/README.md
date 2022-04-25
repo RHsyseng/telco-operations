@@ -5,3 +5,4 @@
 This folder contains different documents related to SNO
 
 * [Workers](./workers/README.md)
+* [Masters](./masters/README.md)
