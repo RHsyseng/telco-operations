@@ -1,0 +1,26 @@
+vrrp_script chk_ocp {
+    script "/usr/bin/timeout 0.9 /usr/bin/curl -o /dev/null -kLs https://localhost:6443/readyz"
+    interval 2
+    weight 20
+    rise 3
+    fall 2
+}
+
+vrrp_instance snoplus.karmalabs.com_API {
+    state MASTER
+    interface NIC
+    virtual_router_id 48
+    priority 101
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    virtual_ipaddress {
+        192.168.122.253
+    }
+    track_script {
+        chk_ocp
+    }
+
+}
