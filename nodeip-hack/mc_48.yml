@@ -1,0 +1,33 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-hack-nodeip-configuration
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - contents:
+            source: data:text/plain;charset=utf-8;base64,IyEvdXNyL2Jpbi9lbnYgYmFzaAoKQ0lEUj0kMQpJUD0kKHBvZG1hbiBydW4gLS1ybSAtLW5ldCBob3N0IC1lIENJRFI9JENJRFIgcXVheS5pby9rYXJtYWIvbm9kZWlwLWhhY2spCmNhdCA8PCBFT0YgPiAvZXRjL3N5c3RlbWQvc3lzdGVtL2t1YmVsZXQuc2VydmljZS5kLzIwLW5vZGVuZXQuY29uZgpbU2VydmljZV0KRW52aXJvbm1lbnQ9IktVQkVMRVRfTk9ERV9JUD0kSVAiICJLVUJFTEVUX05PREVfSVBTPSRJUCIKRU9GCmNhdCA8PCBFT0YgPiAvZXRjL3N5c3RlbWQvc3lzdGVtL2NyaW8uc2VydmljZS5kLzIwLW5vZGVuZXQuY29uZgpbU2VydmljZV0KRW52aXJvbm1lbnQ9IkNPTlRBSU5FUl9TVFJFQU1fQUREUkVTUz0kSVAiCkVPRgo=
+            verification: {}
+          mode: 0755
+          path: /usr/local/bin/nodeip-hack.sh
+    systemd:
+      units:
+      - name: nodeip-configuration.service
+        enabled: true
+        contents: |
+          [Unit]
+          Description=Writes IP address configuration so that kubelet and crio services select a valid node IP
+          Wants=network-online.target crio-wipe.service
+          After=network-online.target ignition-firstboot-complete.service crio-wipe.service
+          Before=kubelet.service crio.service
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/local/bin/nodeip-hack.sh 192.168.123.0/24
+          ExecStart=/bin/systemctl daemon-reload
+          [Install]
+          WantedBy=multi-user.target

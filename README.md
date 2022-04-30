@@ -26,6 +26,7 @@
 * [RHACM](./rhacm/README.md)
 * [SNO](./sno/README.md)
 * [ZTP](./ztp/README.md)
+* [Nodeip hack](./nodeip-hack/README.md)
 
 ## Labs
 

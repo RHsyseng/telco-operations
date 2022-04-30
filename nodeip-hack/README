@@ -1,0 +1,11 @@
+This is a way to force the internal ip in the context of a SNO with several interfaces
+
+# 4.10+
+
+Modify the file `[mc_410.yml](mc_410.yml)` and put any valid ip from the cidr you want to target
+
+# previous versions
+
+Modify the file `[mc_48.yml](mc_48.yml)` and put the cidr you want to target
+
+This leverages a custom container we prepared that will locate the ip of the node associated to a given CIDR
