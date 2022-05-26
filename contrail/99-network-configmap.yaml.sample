@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contrail-network-config
+  namespace: contrail
+data:
+  networkConfig: |
+    controlDataNetworks:
+    - subnet: 10.16.0.0/24
+      gateway: 10.16.0.1

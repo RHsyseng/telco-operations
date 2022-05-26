@@ -1,0 +1,24 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+     machineconfiguration.openshift.io/role: master
+  name: 99-disable-offload-master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Description=disable offload
+          After=kubelet.service
+          [Service]
+          RemainAfterExit=true
+          Type=oneshot
+          ExecStart=/sbin/ethtool -K enp1s0 tx off
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: disable-offload.service
