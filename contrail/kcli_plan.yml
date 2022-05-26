@@ -1,0 +1,31 @@
+parameters:
+ nodes: 3
+ memory: 65536
+ numcpus: 16
+ disk_size: 400
+
+contrail-ctl:
+ type: network
+ cidr: 10.16.0.0/24
+
+contrail-data:
+ type: network
+ cidr: 172.16.0.0/24
+
+{% for num in range(0,nodes) %}
+{{ plan }}-node-{{ num }}:
+ memory: {{ memory }}
+ numcpus: {{ numcpus }}
+ uuid: 11111111-1111-1111-1111-11111111117{{ num + 1 }}
+ uefi_legacy: true
+ secureboot: false
+ start: false
+ disks: [{{ disk_size }}]
+ nets:
+ - name: contrail-data
+   reserveip: true
+   ip: 172.16.0.{{ 20 + num }}
+ - name: contrail-ctl
+   reserveip: true
+   ip: 10.16.0.{{ 20 + num }}
+{% endfor %}

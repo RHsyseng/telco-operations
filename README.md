@@ -18,6 +18,7 @@
 
 ## Documentation
 
+* [Contrail CNI](./contrail/README.md)
 * [Fedora CoreOS](./fcos/README.md)
 * [HyperShift](./hypershift/README.md)
 * [Microshift](./microshift/README.md)
