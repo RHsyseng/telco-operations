@@ -18,6 +18,7 @@
 
 ## Documentation
 
+* [Assisted Installer](./assisted-installer/README.md)
 * [Contrail CNI](./contrail/README.md)
 * [Fedora CoreOS](./fcos/README.md)
 * [HyperShift](./hypershift/README.md)
