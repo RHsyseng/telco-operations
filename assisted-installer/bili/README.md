@@ -8,7 +8,7 @@ This document provides a first view at deploying a cluster using bili workflow, 
 
 #### **Packages**
 
-The openshift-install build with agent support needs to be used. In the future, this will be part of the regular install
+A special openshift-install binary built with agent support must be used. In the future, this will be part of the regular openshift-install binary.
 
 Additionally, nmstate needs to be installed and Network Manager should have a minimum version of 1.30. This will also be included directly in the agent subcommand
 
