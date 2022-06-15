@@ -64,7 +64,7 @@ aicli wait cluster $cluster
 
 Note that when node0 gets installed, the service is no longer available and remainder of the install needs to use typical oc commands (for instance oc get clusterversion)
 
-An `agent wait-for bootstrap-complete/install-complete` is to be added for MVP
+An `agent wait-for bootstrap-complete/install-complete` is to be added for MVP.
 
 ## **Bonus**
 
