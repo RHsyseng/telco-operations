@@ -55,7 +55,7 @@ Additionally, credentials are generated and stored in `auth/kubeconfig`
 
 During the process, the assisted service is available in node0 and remains there until this node gets installed
 
-To monitor progress, we can use API calls, for instance using aicli such as in the following snippet
+To monitor progress, we can use API calls, for instance using aicli such as in the following snippet:
 
 ```
 export AI_URL=192.168.128.11:8090
