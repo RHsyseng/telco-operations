@@ -14,7 +14,7 @@ Additionally, NMState needs to be installed and NetworkManager should have a min
 
 #### **Cluster manifests**
 
-The input needed for this process is a list of yaml files that use similar content to what is used nowadays for ZTP and that need to be put in a directory named `cluster-manifests`
+The input needed for this process is a list of yaml files that use similar content to what is used nowadays for ZTP and that needs to be put in a directory named `cluster-manifests`.
 
 As such, people familiar with this workflow shouldn't have any issues in creating the following files:
 
