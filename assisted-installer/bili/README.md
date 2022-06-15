@@ -2,7 +2,7 @@
 
 This document provides a first view at deploying a cluster using bili workflow, which is a subcommand for openshift-install that will generate a custom iso for installing openshift from a set of ZTP-like manifests and in a unattended fashion.
 
-## **Worklow**
+## **Workflow**
 
 ### **Requisites**
 
