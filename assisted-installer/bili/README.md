@@ -25,7 +25,7 @@ As such, people familiar with this workflow shouldn't have any issues in creatin
 - nmstateconfig.yaml
 - pull-secret.yaml
 
-Alternatively, for people using aicli to interact with AI SAAS API (or onprem), the following command can be used to generate the needed files from a parameter file
+Alternatively, for people using aicli to interact with AI SAAS API (or on-prem), the following command can be used to generate the needed files from a parameter file:
 
 ```
 aicli create cluster-manifests --pf bili.yml bili
