@@ -62,7 +62,7 @@ export AI_URL=192.168.128.11:8090
 aicli wait cluster $cluster
 ```
 
-Note that when node0 gets installed, the service is no longer available and remainder of the install needs to use typical oc commands (for instance oc get clusterversion)
+Note that when node0 gets installed, the service is no longer available and the remainder of the install needs to use typical oc commands (for instance oc get clusterversion).
 
 An `agent wait-for bootstrap-complete/install-complete` is to be added for MVP.
 
