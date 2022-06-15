@@ -41,7 +41,7 @@ Nodes also need to get proper fqdns (localhost beeing forbidden), for instance b
 
 ### **Deployment**
 
-Once we have created the cluster-manifests, The ISO is generated with the following command:
+Once we have created the cluster-manifests, the ISO is generated with the following command:
 
 ```
 openshift-install agent create image --log-level=debug
