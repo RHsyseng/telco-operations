@@ -80,4 +80,4 @@ kcli create vm -P iso=agent.iso -P memory=20480 -P numcpus=16 -P disks=[200] -P 
 
 - [early access details](https://source.redhat.com/groups/public/agent/agent_team_blog/internal_early_access_build)
 - [demo recording from the dev team](https://drive.google.com/file/d/1cUX0KjaTH1IpBoYeC8lzdfJomCzaHPvh/view?usp=sharing)
-- [agent installer branch](https://github.com/openshift/installer/blob/agent-installer)
+- [agent installer branch](https://github.com/openshift/installer/tree/agent-installer)
