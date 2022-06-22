@@ -1,6 +1,6 @@
 # **Deploying an OpenShift Cluster using BILI workflow**
 
-This document provides a first view at deploying a cluster using bili workflow, which is a subcommand for openshift-install that will generate a custom iso for installing openshift from a set of ZTP-like manifests and in a unattended fashion.
+This document provides a first view at deploying a cluster using billi workflow, which is a subcommand for openshift-install that will generate a custom iso for installing openshift from a set of ZTP-like manifests and in a unattended fashion.
 
 ## **Workflow**
 
@@ -28,7 +28,7 @@ As such, people familiar with this workflow shouldn't have any issues in creatin
 Alternatively, for people using aicli to interact with AI SAAS API (or on-prem), the following command can be used to generate the needed files from a parameter file:
 
 ```
-aicli create cluster-manifests --pf bili.yml bili
+aicli create cluster-manifests --pf billi.yml billi
 ```
 
 The ability to generate those files on the fly from a valid install config is planned to be added during 4.12 development.
@@ -72,8 +72,8 @@ When testing, we can use the following kcli commands to create an isolated netwo
 
 ```
 mv agent.iso /var/lib/libvirt/images
-kcli create network -c 192.168.128.0/24 --nodhcp bili
-kcli create vm -P iso=agent.iso -P memory=20480 -P numcpus=16 -P disks=[200] -P nets=['{"name":"bili","mac":"de:ad:bb:ef:00:21","ip":"192.168.128.11","reservedns":"true"}'] bili --count=3
+kcli create network -c 192.168.128.0/24 --nodhcp billi
+kcli create vm -P iso=agent.iso -P memory=20480 -P numcpus=16 -P disks=[200] -P nets=['{"name":"billi","mac":"de:ad:bb:ef:00:21","ip":"192.168.128.11","reservedns":"true"}'] billi --count=3
 ```
 
 ## **References**
