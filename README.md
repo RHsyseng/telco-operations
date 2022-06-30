@@ -22,6 +22,7 @@
 * [Contrail CNI](./contrail/README.md)
 * [Fedora CoreOS](./fcos/README.md)
 * [HyperShift](./hypershift/README.md)
+* [Knative](./knative/README.md)
 * [Microshift](./microshift/README.md)
 * [mirror-registry](./mirror-registry/README.md)
 * [OPA](./opa/README.md)
