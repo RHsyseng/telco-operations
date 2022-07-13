@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: hypercluster1
+spec: {}
+status: {}
+---
+apiVersion: v1
+data:
+  .dockerconfigjson: <redacted>
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: hypercluster1-pull-secret
+  namespace: hypercluster1
+---
+apiVersion: hypershift.openshift.io/v1alpha1
+kind: HostedCluster
+metadata:
+  creationTimestamp: null
+  name: hypercluster1
+  namespace: hypercluster1
+spec:
+  autoscaling: {}
+  controllerAvailabilityPolicy: SingleReplica
+  dns:
+    baseDomain: e2e.bos.redhat.com
+  etcd:
+    managed:
+      storage:
+        persistentVolume:
+          size: 4Gi
+        type: PersistentVolume
+    managementType: Managed
+  fips: false
+  networking:
+    machineCIDR: "10.19.3.0\/26"
+    networkType: OVNKubernetes
+    podCIDR: 10.132.0.0/14
+    serviceCIDR: 172.31.0.0/16
+  platform:
+    agent:
+      agentNamespace: hypercluster1
+    type: Agent
+  pullSecret:
+    name: hypercluster1-pull-secret
+  release:
+    image: quay.io/openshift-release-dev/ocp-release:4.11.0-rc.1-x86_64
+  secretEncryption:
+    aescbc:
+      activeKey:
+        name: hypercluster1-etcd-encryption-key
+    type: aescbc
+  services:
+  - service: APIServer
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: NodePort
+  - service: OAuthServer
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: NodePort
+  - service: OIDC
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: None
+  - service: Konnectivity
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: NodePort
+  - service: Ignition
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: NodePort
+  - service: OVNSbDb
+    servicePublishingStrategy:
+      nodePort:
+        address: 10.19.3.23
+      type: NodePort
+  sshKey:
+    name: hypercluster1-ssh-key
+status:
+  conditions: null
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: capi-provider-role
+  namespace: hypercluster1
+rules:
+- apiGroups:
+  - agent-install.openshift.io
+  resources:
+  - agents
+  verbs:
+  - '*'
+---
+apiVersion: v1
+data:
+  key: 7mkcQ8GAvH2nSp4bA9TCbXKRAMSUe04gbJCnvU7P6HE=
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: hypercluster1-etcd-encryption-key
+  namespace: hypercluster1
+type: Opaque
+---
+apiVersion: v1
+data:
+  id_rsa.pub: c3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCZ1FEVWV0TU9zK1NoVGZQa1E2cytTaVNUbWxLWHpTOFlKTkV3alZKU0RqU3BkSlE3aVRSQktLNjd3c2RYMFlRb2ViTWtHR0JRN3NYMlJuTUQxZklsNmE1TnNsMzhJc1EyZ2pSNHQ1cjBCNXpqdGlUMU5FelhMQmIrREw4YUlVOE10b2NQTGgyMUdMdjZJSW9JamhzSUhySFgzdTUrZ24xOXVYeWRIWnNnSzlCbHJURjU1dWRqY2RBbEVDZ3pScUVtUFFkUGlHZk42VWZXYndxRk1wbDN1VFFpL2l0ZmJKRHl3aFF5WFJoZmpqK3ZBZWVPNEZvUndQOWpXaTlPbTdGRjJ4TWYvR2Ryd2ZqMzM0NjBkazkwcGhaZ0FWVmJmZlB4WE10K0dTRk9id2xNeGhCZVFVVGk1cGdvS09EWHJWckVCTitiMjhoU29vSFBVazNDeFNMNnZ1ZXNlV0RUNGREZ1U3bm9wemtjdmhXSlFIUFJZcmtRVlFnRTRpRnY5c01WYkxNMXpBYjdCdXVnQkxEM2I4UFpxemltMmFKS3VwSnlwZnY0Mmpzc2oydnd2by9nTEpDdzkyaGpiYUFZSThyN3kwL2d5bk9CY3JLUkVvTHFISzBvSGt6V0FPTG5kcWd0TXlqaERnQXFSSk9VUStBMjdtVVVOQVFtU1h3cVJHMnhsWjg9IHJvb3RAbWF2YXpxdWUtdmlydC5jbG91ZC5sYWIuZW5nLmJvcy5yZWRoYXQuY29tCg==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: hypercluster1-ssh-key
+  namespace: hypercluster1
+---
+apiVersion: hypershift.openshift.io/v1alpha1
+kind: NodePool
+metadata:
+  creationTimestamp: null
+  name: hypercluster1
+  namespace: hypercluster1
+spec:
+  clusterName: hypercluster1
+  management:
+    autoRepair: false
+    upgradeType: Replace
+  platform:
+    type: Agent
+  release:
+    image: quay.io/openshift-release-dev/ocp-release:4.11.0-rc.1-x86_64
+  replicas: 0
+status:
+  conditions: null
+  replicas: 0
+---
