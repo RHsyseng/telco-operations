@@ -4,115 +4,55 @@ This document explains how to deploy HyperShift in OpenShift and then use the 'a
 
 This work tries to answer the questions exposed in [this card](https://issues.redhat.com/browse/KNIECO-4458).
 
-> **WARNING**: HyperShift is a work-in-progress project and it is not officially supported by Red Hat.
+> **WARNING**: HyperShift is a work-in-progress project, and it is not officially fully supported by Red Hat.
 
 ## **Hypershift Operator requirements**
 
-* cluster-admin access to an OpenShift Cluster (We tested it with 4.9.21) to deploy the CRDs + operator. See the [ocp-bm-cluster](../assets/ocp-bm-cluster.md) document on how to deploy a baremetal OCP cluster using kcli with virtual masters
-* 1 filesystem type Persistent Volume (4Gi minimum) to store the `etcd` database for demo purposes (3x for 'production' environments)
-* Assisted Service and Hive already installed. See the [assisted-service-hive](../assets/assisted-service-hive.md) document on how to do it
-
-> **NOTE**: Instead of deploying Assisted Service and Hive, RHACM should be deployed (as those are part of RHACM) but at the time of writting this document, there were some issues if using RHACM that's why only the required bits are used.
+* cluster-admin access to an OpenShift Cluster to deploy the CRDs + operator. See the [ocp-bm-cluster](../assets/ocp-bm-cluster.md) document on how to deploy a baremetal OCP cluster using kcli with virtual masters.
+* 1 filesystem type Persistent Volume (4Gi minimum) to store the `etcd` database for demo purposes (3x for 'production' environments).
+* Multicluster Engine deployed, we installed it through RHACM 2.5.
 
 ## **Versions used**
 
-* OCP compact cluster (3 masters) version 4.9.21 (IPI baremetal)
-* Local Storage Operator 4.9.0-202202120107
-* Assisted Service Operator version v0.2.10
-* Hive Operator version v1.2.3490-7e0b248
-* HyperShift Operator built from sources (Commit ID [0371f889](https://github.com/openshift/hypershift/commit/0371f889))
-
-## **Building the Hypershift Operator**
-
-Currently, the HyperShift operator is deployed using the `hypershift` binary, which needs to be compiled manually.
-RHEL8 doesn't include go1.17 officially but it can be installed via `gvm` by following the next steps:
-
-~~~sh
-# Install prerequisites
-sudo dnf install -y curl git make bison gcc glibc-devel
-git clone https://github.com/openshift/hypershift.git
-pushd hypershift
- 
-# Install gvm to install go 1.17
-bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-source ${HOME}/.gvm/scripts/gvm
-gvm install go1.17
-gvm use go1.17
-
-# build the binary
-make hypershift
-popd
-~~~
-
-Then, the `hypershift` binary can be moved to a convenient place as:
-
-~~~sh
-sudo install -m 0755 -o root -g root hypershift/bin/hypershift /usr/local/bin/hypershift
-~~~
-
-Alternatively, it can be compiled using a container as:
-
-~~~sh
-# Install prerequisites
-sudo dnf install podman -y
-# Compile hypershift
-mkdir -p ./tmp/ && \
-podman run -it -v ${PWD}/tmp:/var/tmp/hypershift-bin/:Z --rm docker.io/golang:1.17 sh -c \
-  'git clone --depth 1 https://github.com/openshift/hypershift.git /var/tmp/hypershift/ && \
-  cd /var/tmp/hypershift && \
-  make hypershift && \
-  cp bin/hypershift /var/tmp/hypershift-bin/'
-sudo install -m 0755 -o root -g root ./tmp/hypershift /usr/local/bin/hypershift
-~~~
-
-> **WARNING**: At the time of writting this document, there were some issues already fixed in HyperShift but unfortunately those weren't included in the latest release of the container.
-
-### **Create a custom HyperShift image**
-
-To create a custom HyperShift image, the following steps can be performed:
-
-~~~sh
-QUAY_ACCOUNT='testuser'
-podman login -u ${QUAY_ACCOUNT} -p testpassword quay.io
-sudo dnf install -y curl git make bison gcc glibc-devel
-git clone https://github.com/openshift/hypershift.git
-pushd hypershift
- 
-# Install gvm to install go 1.17
-bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-source ${HOME}/.gvm/scripts/gvm
-gvm install go1.17 -B
-gvm use go1.17
-
-# Build the binaries and the container
-make build
-make RUNTIME=podman IMG=quay.io/${QUAY_ACCOUNT}/hypershift:latest docker-build docker-push
-
-sudo install -m 0755 -o root -g root hypershift/bin/hypershift /usr/local/bin/hypershift
-popd
-~~~
+* OCP compact cluster (3 masters) version 4.11-rc1 (IPI baremetal)
+* Local Storage Operator 4.10.0-202206291026
+* RHACM 2.5
+* HyperShift Operator 4.11 image
 
 ## **Deploying HyperShift**
 
-Once the binary is in place, the operator deployment is performed as:
+HyperShift is deployed using the HyperShift binary, we can get this binary from the `hypershift-operator` image:
 
 ~~~sh
-hypershift install
+podman cp $(podman create --name hypershift --rm quay.io/hypershift/hypershift-operator:4.11):/usr/bin/hypershift /tmp/hypershift && podman rm -f hypershift
+sudo install -m 0755 -o root -g root /tmp/hypershift /usr/local/bin/hypershift
 ~~~
 
-Or if using a custom image:
+Now that we have the binary installed in our system, we can go ahead and deploy the HyperShift operator in our cluster.
 
 ~~~sh
-hypershift install --hypershift-image quay.io/${QUAY_ACCOUNT}/hypershift:latest
+hypershift install render --hypershift-image quay.io/hypershift/hypershift-operator:4.11 | oc apply -f -
 ~~~
 
-Using `hypershift install --render > hypershift-install.yaml` will create a yaml file with all the assets required to deploy HyperShift. It has been [included in the assets folder](../assets/hypershift-install.yaml) as a reference.
+> **NOTE**: There are a few more flags to customize the HyperShift operator installation but they are out of the scope of this document.
 
-> **NOTE**: There are a few more flags to customize the HyperShift operator installation but they are out of the scope of this document. See 
+Using `hypershift install --render` will output a yaml file with all the assets required to deploy HyperShift. Such output has been [included in the assets folder](../assets/hypershift-install.yaml) as a reference.
+
+We should have an HyperShift pod running in the `hypershift` namespace:
+
+~~~sh
+oc -n hypershift get pods
+
+NAME                        READY   STATUS    RESTARTS   AGE
+operator-56c64d7bb5-sld8j   1/1     Running   0          54s
+~~~
+
+
 
 ## **Deploy a hosted cluster**
 
 There are two main CRDs to describe a hosted cluster:
+
 * [`HostedCluster`](https://hypershift-docs.netlify.app/reference/api/#hypershift.openshift.io/v1alpha1.HostedCluster) defines the control plane hosted in the management OpenShift
 * [`NodePool`](https://hypershift-docs.netlify.app/reference/api/#hypershift.openshift.io/v1alpha1.NodePool) defines the nodes that will be created/attached to a hosted cluster
 
@@ -120,456 +60,429 @@ The `hostedcluster.spec.platform` specifies the underlying infrastructure provid
 
 In this document we will cover the 'agent' provider.
 
-### **Deploy an 'agent' hosted cluster and adding a bare metal worker**
+### **Prerequisites**
 
-#### **Requisites**
+#### **DNS**
 
-* Proper DNS entries for the workers (if the worker uses `localhost` it won't work)
-* DNS entry to point `api.${cluster}.${domain}` to each of the nodes where the hostedcluster will be running. This is because the hosted cluster API is exposed as a `nodeport`. For example:
+Proper DNS records for the API and Ingress endpoints are required for the installation to fully succeed. There is a limitation that prevents us from being able to specify a VIP for the Ingress, so depending on the number of workers we plan to add to a cluster we may need to update the ingress wildcard record for the installation to succeed. More info [here](https://bugzilla.redhat.com/show_bug.cgi?id=2105983).
 
-~~~sh
-api.hosted0.krnl.es.  IN A  192.168.124.10
-api.hosted0.krnl.es.  IN A  192.168.124.11
-api.hosted0.krnl.es.  IN A  192.168.124.12
-~~~
-
-* DNS entry to point `*.apps.${cluster}.${domain}` to a load balancer deployed to redirect incoming traffic to the ingresses pod [the OpenShift documentation](https://docs.openshift.com/container-platform/4.9/installing/installing_platform_agnostic/installing-platform-agnostic.html#installation-load-balancing-user-infra-example_installing-platform-agnostic) provides some instructions about this)
-> **NOTE**: This is not strictly required to deploy a sample cluster but to access the exposed routes there. Also, it can be simply an A record pointing to a worker IP where the ingress pods are running and enabling the `hostedcluster.spec.infrastructureAvailabilityPolicy: SingleReplica` configuration parameter.
-
-* Pull-secret (available at cloud.redhat.com)
-* ssh public key already available (it can be created as `ssh-keygen -t rsa -f /tmp/sshkey -q -N ""`)
-
-#### **Procedure**
-
-* Create a file containing all the variables depending on the enviroment:
+> :information_source: API record should point to the IPs of the nodes in the cluster where the API pods run (API gets exposed as a NodePort). Ingress wildcard record should point to the IP of the worker running the router.
 
 ~~~sh
-cat <<'EOF' > ./myvars
-export CLUSTERS_NAMESPACE="clusters"
-export HOSTED="hosted0"
-export HOSTED_CLUSTER_NS="clusters-${HOSTED}"
-export PULL_SECRET_NAME="${HOSTED}-pull-secret"
-export MACHINE_CIDR="192.168.125.0/24"
-export OCP_RELEASE_VERSION="4.9.21"
-export OCP_ARCH="x86_64"
-export BASEDOMAIN="krnl.es"
-
-export PULL_SECRET_CONTENT=$(cat ~/openshift_pull.json)
-export SSH_PUB=$(cat ~/.ssh/id_rsa.pub)
-EOF
-source ./myvars
+api.hypercluster1.e2e.bos.redhat.com.    IN A 10.19.3.23
+api.hypercluster1.e2e.bos.redhat.com.    IN A 10.19.3.24
+api.hypercluster1.e2e.bos.redhat.com.    IN A 10.19.3.25
+*.apps.hypercluster1.e2e.bos.redhat.com. IN A 10.19.3.28
 ~~~
 
-* Create a namespace to host the HostedCluster and secrets
+#### **Agents**
+
+We need some hardware that will be joining the Hosted Cluster as workers. There is no specific order for this operation, meaning that you can provision the agents before or after creating the Hosted Cluster. In this case, we will create the agents beforehand.
+
+1. Since we will have our own namespace to store objects related to this Hosted Cluster, we first need to patch the `Provisioning` configuration. We will configure metal3 to watch `BaremetalHosts` in every namespace, and we will disable virtual media over TLS since our hardware has issues with this.
+
+    ~~~sh
+    oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"watchAllNamespaces": true, "disableVirtualMediaTLS": true }}'
+    ~~~
+
+2. Next, we can create the namespace.
+
+    ~~~sh
+    export NAMESPACE=hypercluster1
+    oc create namespace $NAMESPACE
+    ~~~
+
+3. We need a secret where we will store our pull secret.
+
+    ~~~sh
+    cat << EOF | oc apply -n $NAMESPACE -f -
+    apiVersion: v1
+    kind: Secret
+    type: kubernetes.io/dockerconfigjson
+    metadata:
+      name: mavazque-pullsecret
+      namespace: $NAMESPACE
+    data:
+      .dockerconfigjson: <redacted>
+    ~~~
+
+4. An Assisted Installer ISO is required for booting our nodes, we will get one via a `InfraEnv`.
+
+    ~~~sh
+    cat << EOF | oc apply -n $NAMESPACE -f -
+    apiVersion: agent-install.openshift.io/v1beta1
+    kind: InfraEnv
+    metadata:
+      name: hypershift-cluster1-agents
+      namespace: $NAMESPACE
+    spec:
+      additionalNTPSources:
+        - "10.19.3.4"
+        - "clock.corp.redhat.com"
+      pullSecretRef:
+        name: mavazque-pullsecret
+      sshAuthorizedKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDUetMOs+ShTfPkQ6s+SiSTmlKXzS8YJNEwjVJSDjSpdJQ7iTRBKK67wsdX0YQoebMkGGBQ7sX2RnMD1fIl6a5Nsl38IsQ2gjR4t5r0B5zjtiT1NEzXLBb+DL8aIU8MtocPLh21GLv6IIoIjhsIHrHX3u5+gn19uXydHZsgK9BlrTF55udjcdAlECgzRqEmPQdPiGfN6UfWbwqFMpl3uTQi/itfbJDywhQyXRhfjj+vAeeO4FoRwP9jWi9Om7FF2xMf/Gdrwfj33460dk90phZgAVVbffPxXMt+GSFObwlMxhBeQUTi5pgoKODXrVrEBN+b28hSooHPUk3CxSL6vueseWDT4dDgU7nopzkcvhWJQHPRYrkQVQgE4iFv9sMVbLM1zAb7BuugBLD3b8PZqzim2aJKupJypfv42jssj2vwvo/gLJCw92hjbaAYI8r7y0/gynOBcrKREoLqHK0oHkzWAOLndqgtMyjhDgAqRJOUQ+A27mUUNAQmSXwqRG2xlZ8= root@mavazque-virt.cloud.lab.eng.bos.redhat.com
+    EOF
+    ~~~
+
+> :information_source: `infraenvs.agent-install.openshift.io` label is used to specify which `InfraEnv` is used to boot the `BMHs`.
+
+5. At this point we will have our iso with the Agent ready to discover our nodes, the next step is creating the `BaremetalHosts`.
+
+    ~~~sh
+    cat <<EOF | oc apply -n $NAMESPACE -f -
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: worker0
+      namespace: $NAMESPACE
+    data:
+      username: "bm90YXVzZXI="
+      password: "bm90YXB3ZA=="
+    type: Opaque
+    ---
+    apiVersion: metal3.io/v1alpha1
+    kind: BareMetalHost
+    metadata:
+      name: worker0
+      namespace: $NAMESPACE
+      labels:
+        infraenvs.agent-install.openshift.io: "hypershift-cluster1-agents"
+      annotations:
+        inspect.metal3.io: disabled
+        bmac.agent-install.openshift.io/hostname: "openshift-worker-0"
+        bmac.agent-install.openshift.io/role: "worker"
+    spec:
+      online: true
+      bootMACAddress: ec:f4:bb:ed:6c:48
+      automatedCleaningMode: disabled
+      rootDeviceHints:
+        deviceName: /dev/sda
+      bmc:
+        address: idrac-virtualmedia://10.19.136.22/redfish/v1/Systems/System.Embedded.1
+        credentialsName: worker0
+        disableCertificateVerification: true
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: worker1
+      namespace: $NAMESPACE
+    data:
+      username: "bm90YXVzZXI="
+      password: "bm90YXB3ZA=="
+    type: Opaque
+    ---
+    apiVersion: metal3.io/v1alpha1
+    kind: BareMetalHost
+    metadata:
+      name: worker1
+      namespace: $NAMESPACE
+      labels:
+        infraenvs.agent-install.openshift.io: "hypershift-cluster1-agents"
+      annotations:
+        inspect.metal3.io: disabled
+        bmac.agent-install.openshift.io/hostname: "openshift-worker-1"
+        bmac.agent-install.openshift.io/role: "worker"
+    spec:
+      online: true
+      bootMACAddress: ec:f4:bb:ed:83:50
+      automatedCleaningMode: disabled
+      rootDeviceHints:
+        deviceName: /dev/sda
+      bmc:
+        address: idrac-virtualmedia://10.19.136.23/redfish/v1/Systems/System.Embedded.1
+        credentialsName: worker1
+        disableCertificateVerification: true
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: worker2
+      namespace: $NAMESPACE
+    data:
+      username: "bm90YXVzZXI="
+      password: "bm90YXB3ZA=="
+    type: Opaque
+    ---
+    apiVersion: metal3.io/v1alpha1
+    kind: BareMetalHost
+    metadata:
+      name: worker2
+      namespace: $NAMESPACE
+      labels:
+        infraenvs.agent-install.openshift.io: "hypershift-cluster1-agents"
+      annotations:
+        inspect.metal3.io: disabled
+        bmac.agent-install.openshift.io/hostname: "openshift-worker-2"
+        bmac.agent-install.openshift.io/role: "worker"
+    spec:
+      online: true
+      bootMACAddress: ec:f4:bb:ed:6f:e8
+      automatedCleaningMode: disabled
+      rootDeviceHints:
+        deviceName: /dev/sda
+      bmc:
+        address: idrac-virtualmedia://10.19.136.24/redfish/v1/Systems/System.Embedded.1
+        credentialsName: worker2
+        disableCertificateVerification: true
+    EOF
+    ~~~
+
+6. Metal3 will boot the servers with the assisted installer ISO and eventually we will get the agents ready to be installed.
+
+    ~~~sh
+    oc get -n $NAMESPACE agent,bmh
+
+    NAME                                                                    CLUSTER   APPROVED   ROLE     STAGE
+    agent.agent-install.openshift.io/65d7ae64-2758-4677-9a5b-ee9fd8396014             true       worker   
+    agent.agent-install.openshift.io/a027a342-2390-4be6-869b-5e7dff2bc3c6             true       worker   
+    agent.agent-install.openshift.io/a21d22d1-f5d6-4aae-aa9c-ea4cac523bec             true       worker   
+
+    NAME                              STATE         CONSUMER   ONLINE   ERROR   AGE
+    baremetalhost.metal3.io/worker0   provisioned              true             7m47s
+    baremetalhost.metal3.io/worker1   provisioned              true             7m47s
+    baremetalhost.metal3.io/worker2   provisioned              true             7m47s
+    ~~~
+
+7. The Agents should be in known-unbound state t.
+
+    ~~~sh
+    oc get agent -n $NAMESPACE -o jsonpath='{range .items[*]}BMH: {@.metadata.labels.agent-install\.openshift\.io/bmh} Agent: {@.metadata.name} State: {@.status.debugInfo.state}{"\n"}{end}'
+
+    BMH: worker0 Agent: 65d7ae64-2758-4677-9a5b-ee9fd8396014 State: known-unbound
+    BMH: worker1 Agent: a027a342-2390-4be6-869b-5e7dff2bc3c6 State: known-unbound
+    BMH: worker2 Agent: a21d22d1-f5d6-4aae-aa9c-ea4cac523bec State: known-unbound
+    ~~~
+
+8. Now our nodes are ready to join a Hosted Cluster.
+
+### **Creating the Hosted Cluster**
+
+In the previous section we got our nodes up and running, next is creating the Hosted Cluster and join those nodes to the Hosted Cluster.
+
+1. We will use the `hypershift` binary to render the required objects.
+
+    > :information_source: We can provide the release to use for our Hosted Cluster via the `--release-image` parameter.
+
+    ~~~sh
+    export CLUSTERNAME=hypercluster1
+    export BASEDOMAIN=e2e.bos.redhat.com
+    hypershift create cluster agent --render --name $CLUSTERNAME --base-domain $BASEDOMAIN --pull-secret ${HOME}/pull_secret.json --ssh-key ${HOME}/.ssh/id_rsa.pub --agent-namespace $NAMESPACE --namespace $NAMESPACE --release-image=quay.io/openshift-release-dev/ocp-release:4.11.0-rc.1-x86_64 > hypercluster1.yaml
+    # Add the MachineNetwork CIDR to the Hosted Cluster file
+    sed -i "s/    machineCIDR: \"\"/    machineCIDR: \"10.19.3.0\/26\"/" hypercluster1.yaml
+    ~~~
+
+2. Inside the `hypercluster1.yaml` we will have all the required objects to deploy the Hosted Cluster. Such output has been [included in the assets folder](../assets/hypercluster1.yaml) as a reference.
+
+3. Now it's time to create the Hosted Cluster.
+
+    ~~~sh
+    oc apply -f hypercluster1.yaml
+    ~~~
+
+4. A new namespace will be created by HyperShift using the following naming `namespace-clustername`, inside this namespace we will have our Hosted Control Plane running:
+
+    > :information_source: Since we're using the Agent provider, we got the `capi-provider` deployed.
+
+    ~~~sh
+    oc -n $NAMESPACE-$CLUSTERNAME get pods
+    NAME                                              READY   STATUS    RESTARTS   AGE
+    capi-provider-69854b9d46-qbm5l                    1/1     Running   0          9m40s
+    catalog-operator-55ff45455f-5ltw7                 2/2     Running   0          8m18s
+    certified-operators-catalog-76df8d98d8-x9rjl      1/1     Running   0          8m18s
+    cluster-api-6cc46684b5-dznnx                      1/1     Running   0          9m40s
+    cluster-autoscaler-67fb87fc66-7sn2c               1/1     Running   0          9m
+    cluster-network-operator-545bc59bdd-rkdh7         1/1     Running   0          8m19s
+    cluster-policy-controller-6b9664d484-68982        1/1     Running   0          8m19s
+    cluster-version-operator-79c74c78f-vxsxh          1/1     Running   0          8m19s
+    community-operators-catalog-67ccbfcf68-l6bhd      1/1     Running   0          8m18s
+    control-plane-operator-6c44f7f768-jv6tk           1/1     Running   0          9m39s
+    etcd-0                                            1/1     Running   0          9m1s
+    hosted-cluster-config-operator-6c987c79bc-hll57   1/1     Running   0          8m18s
+    ignition-server-6d448bb47c-jkjdp                  1/1     Running   0          9m9s
+    ingress-operator-6b55c88bd4-cn4d6                 2/2     Running   0          8m19s
+    konnectivity-agent-5895d46b95-vlxrd               1/1     Running   0          9m
+    konnectivity-server-57f55d955-2t924               1/1     Running   0          9m1s
+    kube-apiserver-84b998449b-nklbg                   3/3     Running   0          9m
+    kube-controller-manager-5546f6c4d8-p9nml          1/1     Running   0          8m30s
+    kube-scheduler-746c4db68f-xqwc6                   1/1     Running   0          8m30s
+    machine-approver-57c97c95c8-7lzfb                 1/1     Running   0          9m
+    oauth-openshift-7675445975-xcxn5                  1/1     Running   0          7m41s
+    olm-operator-5d485bcc7-bdxgw                      2/2     Running   0          8m17s
+    openshift-apiserver-5dff7495b9-mn5qx              2/2     Running   0          8m30s
+    openshift-controller-manager-5ddcb7cc8-xg9hq      1/1     Running   0          8m19s
+    openshift-oauth-apiserver-77fd775fd5-gq6lj        1/1     Running   0          8m19s
+    packageserver-77478d4688-9szm7                    2/2     Running   0          8m17s
+    redhat-marketplace-catalog-784c76b988-xn696       1/1     Running   0          8m18s
+    redhat-operators-catalog-5dbcdf64cf-6mgzw         1/1     Running   0          8m18s
+    ~~~
+
+5. We can generate the kubeconfig and try access the new cluster.
+
+    > :information_source: We have a working control plane, but we still need compute nodes to get the cluster installation finished.
+
+    ~~~sh
+    hypershift create kubeconfig > $CLUSTERNAME.kubeconfig
+    oc --kubeconfig $CLUSTERNAME.kubeconfig get clusterversion,nodes
+
+    NAME                                         VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
+    clusterversion.config.openshift.io/version             False       True          9m31s   Working towards 4.11.0-rc.1: 522 of 574 done (90% complete)
+    ~~~
+
+6. The time to add workers to our Hosted Cluster has come. We will scale the NodePool to 2 replicas. This will cause two agents to get installed and join the cluster.
+
+    :information_source: NodePools can be scaled up and down.
+
+    ~~~sh
+    oc scale nodepool/$CLUSTERNAME -n $NAMESPACE --replicas=2
+    ~~~
+
+7. We can see the agents moving through different states.
+
+    > :information_source: States will be `binding -> discoverying -> insufficient -> installing -> installing-in-progress -> added-to-existing-cluster
+
+    ~~~sh
+    oc get agent -n $NAMESPACE -o jsonpath='{range .items[*]}BMH: {@.metadata.labels.agent-install\.openshift\.io/bmh} Agent: {@.metadata.name} State: {@.status.debugInfo.state}{"\n"}{end}'
+
+    BMH: worker0 Agent: 65d7ae64-2758-4677-9a5b-ee9fd8396014 State: installing-in-progress
+    BMH: worker1 Agent: a027a342-2390-4be6-869b-5e7dff2bc3c6 State: known-unbound
+    BMH: worker2 Agent: a21d22d1-f5d6-4aae-aa9c-ea4cac523bec State: installing
+    ~~~
+
+8. Once the agents are added to an existing cluster, eventually they will become nodes of our Hosted Cluster:
+
+    ~~~sh
+    oc --kubeconfig $CLUSTERNAME.kubeconfig get nodes
+
+    NAME                 STATUS   ROLES    AGE    VERSION
+    openshift-worker-0   Ready    worker   3m5s   v1.24.0+2dd8bb1
+    openshift-worker-2   Ready    worker   2m8s   v1.24.0+2dd8bb1
+    ~~~
+
+9. If we look again at the cluster version and the cluster operators we will see the installation is completed now.
+
+    > :information_source: You may need to update your ingress wildcard record to get the Ingress cluster operator working.
+
+    ~~~sh
+    oc --kubeconfig $CLUSTERNAME.kubeconfig get clusterversion,co
+    
+    NAME                                         VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
+    clusterversion.config.openshift.io/version             False       True          28m     Cluster version is 4.11.0-rc.1
+
+    NAME                                                                           VERSION       AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+    clusteroperator.config.openshift.io/console                                    4.11.0-rc.1   True        False         False      4m6s    
+    clusteroperator.config.openshift.io/csi-snapshot-controller                    4.11.0-rc.1   True        False         False      7m56s   
+    clusteroperator.config.openshift.io/dns                                        4.11.0-rc.1   True        False         False      7m38s   
+    clusteroperator.config.openshift.io/image-registry                             4.11.0-rc.1   True        False         False      8m5s   
+    clusteroperator.config.openshift.io/ingress                                    4.11.0-rc.1   True        False         False      28m     
+    clusteroperator.config.openshift.io/insights                                   4.11.0-rc.1   True        False         False      8m34s   
+    clusteroperator.config.openshift.io/kube-apiserver                             4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/kube-controller-manager                    4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/kube-scheduler                             4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/kube-storage-version-migrator              4.11.0-rc.1   True        False         False      7m57s   
+    clusteroperator.config.openshift.io/monitoring                                 4.11.0-rc.1   True        False         False      6m21s   
+    clusteroperator.config.openshift.io/network                                    4.11.0-rc.1   True        False         False      8m38s   
+    clusteroperator.config.openshift.io/openshift-apiserver                        4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/openshift-controller-manager               4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/openshift-samples                          4.11.0-rc.1   True        False         False      7m7s    
+    clusteroperator.config.openshift.io/operator-lifecycle-manager                 4.11.0-rc.1   True        False         False      28m     
+    clusteroperator.config.openshift.io/operator-lifecycle-manager-catalog         4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/operator-lifecycle-manager-packageserver   4.11.0-rc.1   True        False         False      29m     
+    clusteroperator.config.openshift.io/service-ca                                 4.11.0-rc.1   True        False         False      8m31s   
+    clusteroperator.config.openshift.io/storage                                    4.11.0-rc.1   True        False         False      8m34s   
+    ~~~
+
+### **Enabling Node Auto-Scaling for the Hosted Cluster**
+
+Auto-scaling can be enabled, if we enable auto-scaling when more capacity is required in our Hosted Cluster a new Agent will be installed (providing that we have spare agents). In order to enable auto-scaling we can run the following command:
+
+> :information_source: In this case the minimum nodes will be 2 and the maximum 5.
 
 ~~~sh
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-kind: Namespace
-metadata:
- name: ${CLUSTERS_NAMESPACE}
-EOF
-
-export PS64=$(echo -n ${PULL_SECRET_CONTENT} | base64 -w0)
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-data:
- .dockerconfigjson: ${PS64}
-kind: Secret
-metadata:
- name: ${PULL_SECRET_NAME}
- namespace: ${CLUSTERS_NAMESPACE}
-type: kubernetes.io/dockerconfigjson
-EOF
- 
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${HOSTED}-ssh-key
-  namespace: ${CLUSTERS_NAMESPACE}
-stringData:
-  id_rsa.pub: ${SSH_PUB}
-EOF
+oc -n $NAMESPACE patch nodepool $CLUSTERNAME --type=json -p '[{"op": "remove", "path": "/spec/replicas"},{"op":"add", "path": "/spec/autoScaling", "value": { "max": 5, "min": 2 }}]'
 ~~~
 
-* Create the `hostedcluster` and the `nodepool`:
+When the capacity is not required anymore, after 10 minutes the agent will be decommissioned and placed in the spare queue again.
 
-~~~sh
-envsubst <<"EOF" | oc apply -f -
-apiVersion: hypershift.openshift.io/v1alpha1
-kind: HostedCluster
-metadata:
-  name: ${HOSTED}
-  namespace: ${CLUSTERS_NAMESPACE}
-spec:
-  release:
-    image: "quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE_VERSION}-${OCP_ARCH}"
-  pullSecret:
-    name: ${PULL_SECRET_NAME}
-  sshKey:
-    name: "${HOSTED}-ssh-key"
-  networking:
-    serviceCIDR: "172.31.0.0/16"
-    podCIDR: "10.132.0.0/14"
-    machineCIDR: "${MACHINE_CIDR}"
-  platform:
-    agent:
-      agentNamespace: ${HOSTED_CLUSTER_NS}
-    type: Agent
-  infraID: ${HOSTED}
-  dns:
-    baseDomain: ${BASEDOMAIN}
-  services:
-  - service: APIServer
-    servicePublishingStrategy:
-      nodePort:
-        address: api.${HOSTED}.${BASEDOMAIN}
-      type: NodePort
-  - service: OAuthServer
-    servicePublishingStrategy:
-      nodePort:
-        address: api.${HOSTED}.${BASEDOMAIN}
-      type: NodePort
-  - service: OIDC
-    servicePublishingStrategy:
-      nodePort:
-        address: api.${HOSTED}.${BASEDOMAIN}
-      type: None
-  - service: Konnectivity
-    servicePublishingStrategy:
-      nodePort:
-        address: api.${HOSTED}.${BASEDOMAIN}
-      type: NodePort
-  - service: Ignition
-    servicePublishingStrategy:
-      nodePort:
-        address: api.${HOSTED}.${BASEDOMAIN}
-      type: NodePort
-EOF
+1. Let's create a workload that requires a new node.
 
-envsubst <<"EOF" | oc apply -f -
-apiVersion: hypershift.openshift.io/v1alpha1
-kind: NodePool
-metadata:
-  name: ${HOSTED}-workers
-  namespace: ${CLUSTERS_NAMESPACE}
-spec:
-  clusterName: ${HOSTED}
-  nodeCount: 0
-  management:
-    autoRepair: false
-    upgradeType: Replace
-  platform:
-    type: Agent
-  release:
-    image: "quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE_VERSION}-${OCP_ARCH}"
-EOF
-~~~
+    ~~~sh
+    cat <<EOF | oc --kubeconfig $CLUSTERNAME.kubeconfig apply -f -
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: reversewords
+      name: reversewords
+      namespace: default
+    spec:
+      replicas: 40
+      selector:
+        matchLabels:
+          app: reversewords
+      strategy: {}
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: reversewords
+        spec:
+          containers:
+          - image: quay.io/mavazque/reversewords:latest
+            name: reversewords
+            resources:
+              requests:
+                memory: 2Gi
+    status: {}
+    EOF
+    ~~~
 
-> **NOTE**: The `HostedCluster` and `NodePool` objects can be created using the `hypershift` binary as `hypershift create cluster`. See the `hypershift create cluster -h` output for more information.
+2. We will see the remaining agent starts getting deployed.
 
-After a while, a number of pods will be created in the `${CLUSTERS_NAMESPACE}` namespace. Those pods are the control plane of the hosted cluster.
+    ~~~sh
+    oc get agent -n $NAMESPACE -o jsonpath='{range .items[*]}BMH: {@.metadata.labels.agent-install\.openshift\.io/bmh} Agent: {@.metadata.name} State: {@.status.debugInfo.state}{"\n"}{end}'
 
-~~~sh
-oc get pods -n ${HOSTED_CLUSTER_NS}
+    BMH: worker0 Agent: 65d7ae64-2758-4677-9a5b-ee9fd8396014 State: added-to-existing-cluster
+    BMH: worker1 Agent: a027a342-2390-4be6-869b-5e7dff2bc3c6 State: discovering
+    BMH: worker2 Agent: a21d22d1-f5d6-4aae-aa9c-ea4cac523bec State: added-to-existing-cluster
+    ~~~
 
-NAME                                              READY   STATUS    RESTARTS   AGE
-capi-provider-79789f59b-2pmqr                     1/1     Running   0          4h4m
-catalog-operator-68fcc67c9-8pkzk                  2/2     Running   0          4h3m
-certified-operators-catalog-78ff684f4f-kt72n      1/1     Running   0          4h3m
-cluster-api-655c8ff4fb-2n2mx                      1/1     Running   0          4h4m
-cluster-autoscaler-86d9474fcf-4wlcj               1/1     Running   0          4h3m
-cluster-policy-controller-684f8fcdcf-fs5q8        1/1     Running   0          4h4m
-cluster-version-operator-9675499d4-n9w6k          2/2     Running   0          4h4m
-community-operators-catalog-64ff7fb96c-68lpx      1/1     Running   0          4h3m
-control-plane-operator-657f5d6864-qv667           1/1     Running   0          4h4m
-etcd-0                                            1/1     Running   0          4h4m
-hosted-cluster-config-operator-5f7479c8db-4vb4m   1/1     Running   0          4h3m
-ignition-server-7797c5f7-2cf7k                    1/1     Running   0          4h4m
-ingress-operator-85554f497d-kxj6t                 2/2     Running   0          4h3m
-konnectivity-agent-85df5767cb-cg58g               1/1     Running   0          4h4m
-konnectivity-server-67fdfdcd5b-lnm5c              1/1     Running   0          4h4m
-kube-apiserver-7756ddcc98-gxmvl                   2/2     Running   0          4h4m
-kube-controller-manager-6dc6475c58-tnt8q          1/1     Running   0          36m
-kube-scheduler-6f6585f8df-7ztjv                   1/1     Running   0          4h4m
-machine-approver-c8c68ffb9-ndzr5                  1/1     Running   0          4h3m
-oauth-openshift-78cf87c877-l2smf                  1/1     Running   0          4h1m
-olm-operator-68c8c57787-8czbz                     2/2     Running   0          4h3m
-openshift-apiserver-7b69cb4f5-mw9pp               2/2     Running   0          4h4m
-openshift-controller-manager-8d748b754-jp9vr      1/1     Running   0          4h4m
-openshift-oauth-apiserver-755d67dcdd-tlb5f        1/1     Running   0          4h4m
-packageserver-8645d77646-cvd8m                    2/2     Running   0          4h3m
-redhat-marketplace-catalog-79cdb745d7-cx7lb       1/1     Running   0          4h3m
-redhat-operators-catalog-69fcdfc876-l4c8j         1/1     Running   0          4h3m
-~~~
+3. If we check the nodes we will see a new one joined the cluster.
 
-> **NOTE**: Using `agent` also deploys the capi-provider pod that manages the agents.
+    > :information_source: We got worker-1 added to the cluster
 
-The hosted cluster's kubeconfig can be extracted as:
+    ~~~sh
+    oc --kubeconfig $CLUSTERNAME.kubeconfig get nodes
 
-~~~sh
-oc extract -n ${CLUSTERS_NAMESPACE} secret/${HOSTED}-admin-kubeconfig --to=- > ${HOSTED}-kubeconfig
-oc get clusterversion --kubeconfig=${HOSTED}-kubeconfig
-~~~
+    NAME                 STATUS   ROLES    AGE   VERSION
+    openshift-worker-0   Ready    worker   36m   v1.24.0+2dd8bb1
+    openshift-worker-1   Ready    worker   34s   v1.24.0+2dd8bb1
+    openshift-worker-2   Ready    worker   35m   v1.24.0+2dd8bb1
+    ~~~
 
-##### **Adding a bare metal worker**
+4. If we delete the workload and wait 10 minutes the node will be removed.
 
-We will leverage the Assisted Service and Hive to create the custom ISO as well as the Baremetal Operator to perform the installation.
+    ~~~sh
+    oc --kubeconfig $CLUSTERNAME.kubeconfig -n default delete deployment reversewords
+    ~~~
 
-* Enable the Baremetal Operator to watch all namespaces as the `baremetalhost` object for the hosted cluster will be created in the `${HOSTED_CLUSTER_NS}` namespace:
+5. After 10 minutes.
 
-~~~sh
-oc patch provisioning provisioning-configuration --type merge -p '{"spec":{"watchAllNamespaces": true }}'
-~~~
+    ~~~sh
+    oc --kubeconfig $CLUSTERNAME.kubeconfig get nodes
 
-> **NOTE**: This will trigger a restart of the `metal3` pod in the `openshift-machine-api` namespace.
+    NAME                 STATUS   ROLES    AGE   VERSION
+    openshift-worker-0   Ready    worker   56m   v1.24.0+2dd8bb1
+    openshift-worker-2   Ready    worker   55m   v1.24.0+2dd8bb1
+    ~~~
 
-* Wait until the `metal3` pod is ready again:
+    ~~~sh
+    oc get agent -n $NAMESPACE -o jsonpath='{range .items[*]}BMH: {@.metadata.labels.agent-install\.openshift\.io/bmh} Agent: {@.metadata.name} State: {@.status.debugInfo.state}{"\n"}{end}'
 
-~~~sh
-until oc wait -n openshift-machine-api $(oc get pods -n openshift-machine-api -l baremetal.openshift.io/cluster-baremetal-operator=metal3-state -o name) --for condition=containersready --timeout 10s >/dev/null 2>&1 ; do sleep 1 ; done
-~~~
-
-* Create the pull secret in the `${HOSTED_CLUSTER_NS}` namespace as it needs to be injected later in the `InfraEnv`
-
-~~~sh
-export PS64=$(echo -n ${PULL_SECRET_CONTENT} | base64 -w0)
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-data:
- .dockerconfigjson: ${PS64}
-kind: Secret
-metadata:
- name: ${PULL_SECRET_NAME}
- namespace: ${HOSTED_CLUSTER_NS}
-type: kubernetes.io/dockerconfigjson
-EOF
-~~~
-
-* Create a custom `InfraEnv` with just the pull secret, ssh key and optionally, the NTP
-
-~~~sh
-envsubst <<"EOF" | oc apply -f -
-apiVersion: agent-install.openshift.io/v1beta1
-kind: InfraEnv
-metadata:
-  name: ${HOSTED}
-  namespace: ${HOSTED_CLUSTER_NS}
-spec:
-  additionalNTPSources:
-    - "clock.corp.redhat.com"
-  pullSecretRef:
-    name: ${PULL_SECRET_NAME}
-  sshAuthorizedKey: ${SSH_PUB}
-EOF
-~~~
-
-This will generate a custom ISO for the host to be installed.
-
-~~~sh
-until oc wait -n "${HOSTED_CLUSTER_NS}" $(oc get infraenv "${HOSTED}" -n "${HOSTED_CLUSTER_NS}" -o name) --for condition=ImageCreated --timeout 10s >/dev/null 2>&1 ; do sleep 1 ; done
-~~~
-
-* Set the variables required for the BMC details of the worker that is going to be added:
-
-~~~sh
-export BMC_USERNAME=$(echo -n "root" | base64 -w0)
-export BMC_PASSWORD=$(echo -n "calvin" | base64 -w0)
-# In our case, we are using the installer VM as the sushy-tools server
-# export BMC_IP=$(hostname -i)
-export BMC_IP="192.168.124.228"
-export WORKER_NAME="ocp-worker-0"
-export BOOT_MAC_ADDRESS="aa:bb:cc:dd:ee:ff"
-export UUID=11111111-1111-1111-1111-111111111111
-export REDFISH="redfish-virtualmedia+http://${BMC_IP}:8000/redfish/v1/Systems/${UUID}"
-~~~
-
-* Create the BMC secret to host the BMC user and password:
-
-~~~sh
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-data:
-  password: ${BMC_PASSWORD}
-  username: ${BMC_USERNAME}
-kind: Secret
-metadata:
-  name: ${WORKER_NAME}-bmc-secret
-  namespace: ${HOSTED_CLUSTER_NS}
-type: Opaque
-EOF
-~~~
-
-* Create the BMH object:
-
-~~~sh
-envsubst <<"EOF" | oc apply -f -
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  name: ${WORKER_NAME}
-  namespace: ${HOSTED_CLUSTER_NS}
-  labels:
-    infraenvs.agent-install.openshift.io: ${HOSTED}
-  annotations:
-    inspect.metal3.io: disabled
-spec:
-  automatedCleaningMode: disabled
-  bmc:
-    disableCertificateVerification: True
-    address: ${REDFISH}
-    credentialsName: ${WORKER_NAME}-bmc-secret
-  bootMACAddress: ${BOOT_MAC_ADDRESS}
-  online: true
-EOF
-~~~
-
-> **NOTE**: The label references the infraenv previously created and inspection is disabled as it would be done by the Assisted Service instead.
-
-After a few minutes, an `agent` is created (the name is the hardware UUID, in our case, we created it upfront):
-
-~~~sh
-until oc get agent -n ${HOSTED_CLUSTER_NS} ${UUID} >/dev/null 2>&1 ; do sleep 1 ; done
-export AGENT=$(oc get agent -n ${HOSTED_CLUSTER_NS} ${UUID} -o name)
-~~~
-
-* The `agent` needs to be approved and configured for the installation:
-
-~~~sh
-oc patch ${AGENT} -n ${HOSTED_CLUSTER_NS} -p '{"spec":{"installation_disk_id":"/dev/sda","approved":true,"hostname":"ocp-worker-0.hosted0.krnl.es","role":"worker"}}' --type merge
-~~~
-
-* Finally, scaling up the nodepool will trigger the installation:
-
-~~~sh
-oc patch nodepool/${HOSTED}-workers -n ${CLUSTERS_NAMESPACE} -p '{"spec":{"nodeCount": 1}}' --type merge
-~~~
-
-* Then the worker is added to the cluster:
-
-~~~sh
-oc get nodes --kubeconfig=${HOSTED}-kubeconfig
-NAME                           STATUS   ROLES    AGE   VERSION
-ocp-worker-0.hosted0.krnl.es   Ready    worker   63m   v1.22.3+fdba464
-
-oc get co --kubeconfig=${HOSTED}-kubeconfig
-NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
-console                                    4.9.21    False       False         False      62m     RouteHealthAvailable: failed to GET route (https://console-openshift-console.apps.hosted0.krnl.es): Get "https://console-openshift-console.apps.hosted0.krnl.es": x509: certificate is valid for *.apps.ocp.krnl.es, not console-openshift-console.apps.hosted0.krnl.es
-csi-snapshot-controller                    4.9.21    True        False         False      61m     
-dns                                        4.9.21    True        False         False      61m     
-image-registry                             4.9.21    True        False         False      61m     
-ingress                                    4.9.21    True        False         True       51m     The "default" ingress controller reports Degraded=True: DegradedConditions: One or more other status conditions indicate a degraded state: PodsScheduled=False (PodsNotScheduled: Some pods are not scheduled: Pod "router-default-7f9dc784cb-mlg9m" cannot be scheduled: 0/1 nodes are available: 1 node(s) didn't have free ports for the requested pod ports. Make sure you have sufficient worker nodes.), CanaryChecksSucceeding=False (CanaryChecksRepetitiveFailures: Canary route checks for the default ingress controller are failing)
-kube-apiserver                             4.9.21    True        False         False      4h27m   
-kube-controller-manager                    4.9.21    True        False         False      4h27m   
-kube-scheduler                             4.9.21    True        False         False      4h27m   
-kube-storage-version-migrator              4.9.21    True        False         False      61m     
-monitoring                                           False       True          True       45m     Rollout of the monitoring stack failed and is degraded. Please investigate the degraded status error.
-network                                    4.9.21    True        False         False      63m     
-node-tuning                                4.9.21    True        False         False      61m     
-openshift-apiserver                        4.9.21    True        False         False      4h27m   
-openshift-controller-manager               4.9.21    True        False         False      4h27m   
-openshift-samples                          4.9.21    True        False         False      60m     
-operator-lifecycle-manager                 4.9.21    True        False         False      4h26m   
-operator-lifecycle-manager-catalog         4.9.21    True        False         False      4h26m   
-operator-lifecycle-manager-packageserver   4.9.21    True        False         False      4h27m   
-service-ca                                 4.9.21    True        False         False      62m     
-storage                                    4.9.21    True        False         False      62m    
-
-oc get clusterversion --kubeconfig=${HOSTED}-kubeconfig
-NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
-version             False       True          4h28m   Unable to apply 4.9.21: some cluster operators have not yet rolled out
-~~~
-
-> **NOTE**: Some cluster operators are degraded because there is only a single worker and they require at least 2. However setting the `hostedcluster.spec.infrastructureAvailabilityPolicy: SingleReplica` configuration parameter disables the requirement and will make the clusters operator available with a single worker.
-
-* After adding another worker, the hosted cluster is completely available as well as all the cluster operators:
-
-~~~sh
-export BMC_USERNAME=$(echo -n "root" | base64 -w0)
-export BMC_PASSWORD=$(echo -n "calvin" | base64 -w0)
-# In our case, we are using the installer VM as the sushy-tools server
-# export BMC_IP=$(hostname -i)
-export BMC_IP="192.168.124.228"
-export WORKER_NAME="ocp-worker-1"
-export BOOT_MAC_ADDRESS="aa:bb:cc:dd:ee:fa"
-export UUID=11111111-1111-1111-1111-111111111112
-export REDFISH="redfish-virtualmedia+http://${BMC_IP}:8000/redfish/v1/Systems/${UUID}"
-
-envsubst <<"EOF" | oc apply -f -
-apiVersion: v1
-data:
-  password: ${BMC_PASSWORD}
-  username: ${BMC_USERNAME}
-kind: Secret
-metadata:
-  name: ${WORKER_NAME}-bmc-secret
-  namespace: ${HOSTED_CLUSTER_NS}
-type: Opaque
-EOF
-
-envsubst <<"EOF" | oc apply -f -
-apiVersion: metal3.io/v1alpha1
-kind: BareMetalHost
-metadata:
-  name: ${WORKER_NAME}
-  namespace: ${HOSTED_CLUSTER_NS}
-  labels:
-    infraenvs.agent-install.openshift.io: ${HOSTED}
-  annotations:
-    inspect.metal3.io: disabled
-spec:
-  automatedCleaningMode: disabled
-  bmc:
-    disableCertificateVerification: True
-    address: ${REDFISH}
-    credentialsName: ${WORKER_NAME}-bmc-secret
-  bootMACAddress: ${BOOT_MAC_ADDRESS}
-  online: true
-EOF
-
-until oc get agent -n ${HOSTED_CLUSTER_NS} ${UUID} >/dev/null 2>&1 ; do sleep 1 ; done
-export AGENT=$(oc get agent -n ${HOSTED_CLUSTER_NS} ${UUID} -o name)
-
-oc patch ${AGENT} -n ${HOSTED_CLUSTER_NS} -p '{"spec":{"installation_disk_id":"/dev/sda","approved":true,"hostname":"ocp-worker-1.hosted0.krnl.es","role":"worker"}}' --type merge
-
-oc patch nodepool/${HOSTED}-workers -n ${CLUSTERS_NAMESPACE} -p '{"spec":{"nodeCount": 2}}' --type merge
-~~~
-
-~~~sh
-oc get nodes --kubeconfig=hosted0-kubeconfig  
-NAME                           STATUS   ROLES    AGE    VERSION
-ocp-worker-0.hosted0.krnl.es   Ready    worker   19h    v1.22.3+fdba464
-ocp-worker-1.hosted0.krnl.es   Ready    worker   2m2s   v1.22.3+fdba464
-
-oc get hostedcluster -n clusters hosted0
-NAME      VERSION   KUBECONFIG                 PROGRESS    AVAILABLE   REASON
-hosted0   4.9.21    hosted0-admin-kubeconfig   Completed   True        HostedClusterAsExpected
-
-oc get co --kubeconfig=hosted0-kubeconfig  
-NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
-console                                    4.9.21    True        False         False      68s     
-csi-snapshot-controller                    4.9.21    True        False         False      19h     
-dns                                        4.9.21    True        False         False      19h     
-image-registry                             4.9.21    True        False         False      19h     
-ingress                                    4.9.21    True        False         False      19h     
-kube-apiserver                             4.9.21    True        False         False      22h     
-kube-controller-manager                    4.9.21    True        False         False      22h     
-kube-scheduler                             4.9.21    True        False         False      22h     
-kube-storage-version-migrator              4.9.21    True        False         False      19h     
-monitoring                                 4.9.21    True        False         False      6m26s   
-network                                    4.9.21    True        False         False      19h     
-node-tuning                                4.9.21    True        False         False      19h     
-openshift-apiserver                        4.9.21    True        False         False      22h     
-openshift-controller-manager               4.9.21    True        False         False      22h     
-openshift-samples                          4.9.21    True        False         False      19h     
-operator-lifecycle-manager                 4.9.21    True        False         False      22h     
-operator-lifecycle-manager-catalog         4.9.21    True        False         False      22h     
-operator-lifecycle-manager-packageserver   4.9.21    True        False         False      22h     
-service-ca                                 4.9.21    True        False         False      19h     
-storage                                    4.9.21    True        False         False      19h
-
-oc get clusterversion --kubeconfig=hosted0-kubeconfig  
-NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
-version   4.9.21    True        False         94s     Cluster version is 4.9.21
-~~~
+    BMH: worker0 Agent: 65d7ae64-2758-4677-9a5b-ee9fd8396014 State: added-to-existing-cluster
+    BMH: worker1 Agent: a027a342-2390-4be6-869b-5e7dff2bc3c6 State: known-unbound
+    BMH: worker2 Agent: a21d22d1-f5d6-4aae-aa9c-ea4cac523bec State: added-to-existing-cluster
+    ~~~
