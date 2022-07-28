@@ -89,6 +89,8 @@ The repository for the code of the registry is stored at [https://github.com/qua
 * The command can also target a remote host, although we didn't see too much benefit to going with such approach.
 * IPv6 isn't currently supported by quay. For the time being, the folder [IPv6](ipv6) contains assets allowing to deploy an extra container in an IPv6 context. This can be deployed with the following instructions:
 
+    > :warning: Using HAProxy for providing IPv6 support on Quay **is not** supported by Red Hat, use at your own risk.
+
     ~~~sh
     cp quay_haproxy.cfg /etc/quay-install/haproxy.cfg
     cp quay_haproxy.service /usr/lib/systemd/system
