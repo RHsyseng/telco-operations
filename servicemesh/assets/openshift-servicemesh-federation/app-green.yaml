@@ -1,0 +1,185 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-app1
+  namespace: nfs-app2
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: nfs-app-istio1
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dokuwiki
+  namespace: nfs-app-istio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:scc:anyuid
+  namespace: nfs-app-istio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:anyuid
+subjects:
+- kind: ServiceAccount
+  name: dokuwiki
+  namespace: nfs-app-istio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: dokuwiki
+    version: green
+  name: dokuwiki
+  namespace: nfs-app-istio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dokuwiki
+      version: green
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app.kubernetes.io/name: dokuwiki
+        version: green
+    spec:
+      serviceAccountName: dokuwiki
+      containers:
+      - env:
+        - name: DOKUWIKI_USERNAME
+          value: user
+        - name: DOKUWIKI_FULL_NAME
+          value: User Name
+        - name: DOKUWIKI_PASSWORD
+          value: 0GOX6EMvDl
+        - name: DOKUWIKI_EMAIL
+          value: user@example.com
+        - name: DOKUWIKI_WIKI_NAME
+          value: My Wiki
+        image: quay.io/mavazque/dokuwiki:20200729.0.0-debian-10-r121
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /doku.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: dokuwiki
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /doku.php
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 300m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /bitnami/dokuwiki
+          name: dokuwiki-data
+      dnsPolicy: ClusterFirst
+      hostAliases:
+      - hostnames:
+        - status.localhost
+        ip: 127.0.0.1
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 65534
+        supplementalGroups: [65534, 0]
+      volumes:
+      - name: dokuwiki-data
+        persistentVolumeClaim:
+          claimName: pvc-app1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: dokuwiki
+  name: dokuwiki
+  namespace: nfs-app-istio
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: dokuwiki
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: dokuwiki-gateway
+  namespace: nfs-app-istio
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: dokuwiki
+  namespace: nfs-app-istio
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - dokuwiki-gateway
+  http:
+  - match:
+    - uri:
+        exact: /dokuwiki
+    - uri:
+        prefix: /lib
+    route:
+    - destination:
+        host: dokuwiki
+        port:
+          number: 8080
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: dokuwiki
+  namespace: nfs-app-istio
+spec:
+  host: dokuwiki-gateway
+  subsets:
+  - name: green
+    labels:
+      version: green
