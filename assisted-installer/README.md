@@ -5,3 +5,4 @@
 * [Deployment using Billi](./billi/README.md)
 * [Disabling nics ](./disable-nic/README.md)
 * [Proxied deployment](./proxied-deployment/README.md)
+* [Software raid](./software-raid/README.md)
