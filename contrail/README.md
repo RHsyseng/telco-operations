@@ -18,7 +18,7 @@ It is based on the documentation available publically [here](https://www.juniper
 0. Edit the following files in the downloaded manifests
 
 - `99-network-configmap.yaml`: Specify data network cidr
-- `99-disable-offload-master.yaml/99-disable-offload-master-ens4.yaml/99-disable-offload-worker.yaml/99-disable-offload-worker-ens4.yaml`: If deploying on vms, specify the correct nics in all of those files to disable nic offloading.
+- `99-disable-offload-master.yaml` `99-disable-offload-master-ens4.yaml` `99-disable-offload-worker.yaml` `99-disable-offload-worker-ens4.yaml`: If deploying on vms, specify the correct nics in all of those files to disable nic offloading.
 
 1. Create a valid parameter file such as [aicli_parameters.yml](aicli_parameters.yml)
 
@@ -28,8 +28,8 @@ Relevant elements for this parameter are the following one:
 - `network_type`: This is forced to contrail
 - `openshift_version`: This currently needs to be 4.8
 - `manifests`: the name of the directory where the Contrail manifests have been downloaded
-- api_vip and ingress_vip: Mandatory for an HA install
-- ignition_config_override: This contains a specific ignition needed for the nodes to properly communicate with Contrail Api server
+- `api_vip` and `ingress_vip`: Mandatory for an HA install
+- `ignition_config_override`: This contains a specific ignition needed for the nodes to properly communicate with Contrail Api server
 - `hosts`: This optional section allows the bmc information to be provided so that the discovery iso gets automatically attached and the hosts started automatically. Alternatively, one can download the iso manually and plug it to target nodes.
 
 2. Launch `aicli create deployment --paramfile my_params.yml`
