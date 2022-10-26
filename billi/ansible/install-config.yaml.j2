@@ -30,9 +30,34 @@ platform:
 {% for host in hosts %}
     - name: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
       bootMACAddress: {{ host['mac'] }}
-      role: {{ 'master' if loop.index0 < 3 else 'worker' }}
+      role: {{ host['role']|default('master' if loop.index0 < 3 else 'worker') }}
+{% if 'disk' in host %}
+      rootDeviceHints:
+        deviceName: "/dev/{{ host['disk'] | basename }}"
+{% elif 'hctl' in host %}
+      rootDeviceHints:
+        hctl: "{{ host['hctl'] }}"
+{% elif 'serial' in host %}
+      rootDeviceHints:
+        serialNumber: "{{ host['serial'] }}"
+{% elif 'wwn' in host %}
+      rootDeviceHints:
+        wwn: "{{ host['wwn'] }}"
+{% endif %}
 {% endfor %}
     ingressVips:
     - {{ ingress_vip }}
 pullSecret: '{{ pull_secret }}'
 sshKey: {{ ssh_key }}
+{% if ca is defined %}
+additionalTrustBundle: |
+ {{ ca | replace('\n', '\n ') }}
+{% endif %}
+{% if disconnected_url is defined %}
+imageContentSources:
+{% for source in ['quay.io/openshift-release-dev/ocp-v4.0-art-dev', 'quay.io/openshift-release-dev/ocp-release'] %}
+- mirrors:
+  - {{ disconnected_url }}
+  source: {{ source }}
+{% endfor %}
+{% endif %}

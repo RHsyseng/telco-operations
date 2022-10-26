@@ -15,6 +15,11 @@
     ansible.builtin.template:
       src: agent-config.yaml.j2
       dest: billi/agent-config.yaml
+  - name: Copy manifests
+    copy:
+      src: manifests
+      dest: billi
+    when: '"manifests" is directory'
   - name: Grab openshift-install
     ansible.builtin.unarchive:
       src: "{{ openshift_install_url }}"
