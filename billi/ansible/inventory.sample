@@ -1,0 +1,25 @@
+all:
+  vars:
+    openshift_install_url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp-dev-preview/latest-4.12/openshift-install-linux.tar.gz
+    iso_url: http://192.168.122.1/agent.iso
+    prefix: 24
+    gateway: 192.168.128.1
+    hosts:
+    - ip: 192.168.128.11
+      mac: de:ad:bb:ef:00:21
+      bmc_url: http://192.168.122.1:8000/redfish/v1/Systems/11111111-1111-1111-1111-111111111181
+    - ip: 192.168.128.12
+      mac: de:ad:bb:ef:00:22
+      bmc_url: http://192.168.122.1:8000/redfish/v1/Systems/11111111-1111-1111-1111-111111111182
+    - ip: 192.168.128.13
+      mac: de:ad:bb:ef:00:23
+      bmc_url: http://192.168.122.1:8000/redfish/v1/Systems/11111111-1111-1111-1111-111111111183
+    cluster: billi
+    domain: karmalabs.corp
+    machine_cidr: 192.168.128.0/24
+    masters: 3
+    workers: 0
+    api_vip: 192.168.128.253
+    ingress_vip: 192.168.128.252
+    pull_secret: 'CHANGEME'
+    ssh_key: CHANGEME
