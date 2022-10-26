@@ -1,0 +1,53 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+  - name: Create Billi directory to hold assets
+    ansible.builtin.file:
+      path: billi
+      state: directory
+      mode: '0755'
+  - name: Render install config
+    ansible.builtin.template:
+      src: install-config.yaml.j2
+      dest: billi/install-config.yaml
+  - name: Render agent config
+    ansible.builtin.template:
+      src: agent-config.yaml.j2
+      dest: billi/agent-config.yaml
+  - name: Grab openshift-install
+    ansible.builtin.unarchive:
+      src: "{{ openshift_install_url }}"
+      dest: "."
+      remote_src: true
+      creates: openshift-install
+  - name: Generate iso
+    ansible.builtin.command:
+      cmd: ./openshift-install agent create image --dir billi --log-level debug
+      creates: billi/agent.iso
+  - name: Download redfish helper lib
+    ansible.builtin.get_url:
+      url: https://raw.githubusercontent.com/karmab/kcli/master/kvirt/redfish/__init__.py
+      dest: ./redfish.py
+  - name: Copy agent.iso to /var/www/html
+    command: cp billi/agent.iso /var/www/html
+  - name: Boot hosts with iso
+    ansible.builtin.command:
+      cmd: ./boot.py
+#  - name: Remove install-config.yaml
+#    ansible.builtin.file:
+#      path: billi/install-config.yaml
+#      state: absent
+#  - name: Remove agent-config.yaml
+#    ansible.builtin.file:
+#      path: billi/agent-config.yaml
+#      state: absent
+#  - name: Wait for bootstrap to complete
+#    ansible.builtin.command:
+#      cmd: ./openshift-install agent wait-for bootstrap-complete --dir billi --log-level debug
+#  - name: Wait for install to complete
+#    ansible.builtin.command:
+#      cmd: ./openshift-install agent wait-for install-complete --dir billi --log-level debug
+  - name: Wait for install to complete
+    ansible.builtin.command:
+      cmd: ./openshift-install wait-for install-complete --dir billi --log-level debug

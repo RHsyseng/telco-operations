@@ -1,0 +1,27 @@
+parameters:
+ cluster: billi
+ nodes: 3
+ network: billi
+ memory: 20480
+ numcpus: 16
+ disk_size: 200
+
+billi:
+ type: network
+ cidr: 192.168.128.0/24
+ dhcp: false
+
+{% for num in range(0,nodes) %}
+{{ cluster }}-node-{{ num }}:
+ memory: {{ memory }}
+ numcpus: {{ numcpus }}
+ uuid: 11111111-1111-1111-1111-11111111118{{ num + 1 }}
+ uefi: true
+ user: core
+ start: false
+ disks:
+ - {{ disk_size }}
+ nets:
+ - name: {{ network }}
+   mac: de:ad:bb:ef:00:{{ 21 + num }}
+{% endfor %}

@@ -1,0 +1,43 @@
+apiVersion: v1alpha1
+hosts:
+{% for host in hosts %}
+- hostname: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
+  interfaces:
+  - macAddress: {{ host['mac'] }}
+    name: {{ host['nic']|default('ens3') }}
+  networkConfig:
+    dns-resolver:
+      config:
+        server:
+        - {{ gateway }}
+    interfaces:
+    - ethernet:
+        auto-negotiation: true
+        duplex: full
+        speed: 1000
+      ipv4:
+        address:
+        - ip: {{ host['ip'] }}
+          prefix-length: {{ prefix }}
+        enabled: true
+      mac-address: {{ host['mac'] }}
+      mtu: 1500
+      name: {{ host['nic']|default('ens3') }}
+      state: up
+      type: ethernet
+    routes:
+      config:
+      - destination: {{ machine_cidr }}
+        next-hop-address: {{ gateway }}
+        next-hop-interface: {{ host['nic']|default('ens3') }}
+      - destination: 0.0.0.0/0
+        next-hop-address: {{ gateway }}
+        next-hop-interface: {{ host['nic']|default('ens3') }}
+        table-id: 254
+        enabled: true
+{% endfor %}
+---
+kind: AgentConfig
+metadata:
+  name: billi
+rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ip']) }}
