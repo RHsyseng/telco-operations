@@ -9,7 +9,9 @@ hosts:
     dns-resolver:
       config:
         server:
-        - {{ gateway }}
+{% for ns in dns_resolver %}
+        - {{ ns }}
+{% endfor %}
     interfaces:
     - ethernet:
         auto-negotiation: true
