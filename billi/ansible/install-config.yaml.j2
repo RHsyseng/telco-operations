@@ -64,7 +64,7 @@ platform:
     ingressVips:
     - {{ ingress_vip }}
 {% endif %}
-pullSecret: '{{ pull_secret }}'
+pullSecret: '{{ pull_secret_data }}'
 sshKey: {{ ssh_key }}
 {% if ca is defined %}
 additionalTrustBundle: |
