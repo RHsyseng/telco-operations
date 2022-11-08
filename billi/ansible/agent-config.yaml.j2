@@ -15,7 +15,7 @@ hosts:
         auto-negotiation: true
         duplex: full
         speed: 1000
-      ipv4:
+{{ '      ipv6' if ':' in host['ip'] else '      ipv4' }}:
         address:
         - ip: {{ host['ip'] }}
           prefix-length: {{ prefix }}
@@ -27,13 +27,17 @@ hosts:
       type: ethernet
     routes:
       config:
+{% if ':' not in host['ip'] %}
       - destination: {{ machine_cidr }}
         next-hop-address: {{ gateway }}
         next-hop-interface: {{ host['nic']|default('ens3') }}
-      - destination: 0.0.0.0/0
+{% endif %}
+      - destination: {{ "::/0" if ':' in host['ip'] else "0.0.0.0/0" }}
         next-hop-address: {{ gateway }}
         next-hop-interface: {{ host['nic']|default('ens3') }}
+{% if ':' not in host['ip'] %}
         table-id: 254
+{% endif %}
         enabled: true
 {% endfor %}
 ---
