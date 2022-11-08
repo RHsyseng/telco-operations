@@ -32,7 +32,7 @@ networking:
   machineNetwork:
 {% for network in machine_networks %}
   - cidr: {{ network }}
-{% endif }
+{% endfor %}
   networkType: OVNKubernetes
   serviceNetwork: {{ service_networks }}
 platform:
