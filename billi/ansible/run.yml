@@ -2,6 +2,22 @@
 - hosts: localhost
   connection: local
   tasks:
+  - name: Load pull_secret
+    include_vars:
+      file: "{{ pull_secret|default('openshift_pull.json') }}"
+      name: pull_secret
+  - name: Set pull_secret variable
+    set_fact:
+      pull_secret: "{{ pull_secret | to_json(separators=(',',':')) }}"
+  - name: Grab ca
+    register: ca_content
+    ansible.builtin.shell:
+      cmd: "openssl s_client -showcerts -connect {{ disconnected_url }} </dev/null 2>/dev/null | openssl x509 -outform PEM"
+    when: disconnected_url is defined and ca is not defined
+  - name: Set ca variable
+    set_fact: 
+     ca={{ ca_content.stdout }}
+    when: disconnected_url is defined and ca is not defined
   - name: Create Billi directory to hold assets
     ansible.builtin.file:
       path: billi
@@ -26,6 +42,12 @@
       dest: "."
       remote_src: true
       creates: openshift-install
+    when: disconnected_url is not defined
+  - name: Grab openshift-install
+    ansible.builtin.command:
+      cmd: oc adm release extract --registry-config {{ pull_secret_file|default('openshift_pull.json') }} --command=openshift-install --to . {{ disconnected_url }}/{{ disconnected_prefix|default('ocp4') }}:{{ version|default('4.12-x86_64') }} --insecure
+      creates: openshift-install
+    when: disconnected_url is defined
   - name: Generate iso
     ansible.builtin.command:
       cmd: ./openshift-install agent create image --dir billi --log-level debug
@@ -38,15 +60,19 @@
     command: cp billi/agent.iso /var/www/html
   - name: Boot hosts with iso
     ansible.builtin.command:
-      cmd: ./boot.py
-#  - name: Remove install-config.yaml
-#    ansible.builtin.file:
-#      path: billi/install-config.yaml
-#      state: absent
-#  - name: Remove agent-config.yaml
-#    ansible.builtin.file:
-#      path: billi/agent-config.yaml
-#      state: absent
+      cmd: ./boot.py {{ ansible_inventory_sources[0] }}
+  - name: Remove agent.iso
+    ansible.builtin.file:
+      path: billi/agent.iso
+      state: absent
+  - name: Remove install-config.yaml
+    ansible.builtin.file:
+      path: billi/install-config.yaml
+      state: absent
+  - name: Remove agent-config.yaml
+    ansible.builtin.file:
+      path: billi/agent-config.yaml
+      state: absent
 #  - name: Wait for bootstrap to complete
 #    ansible.builtin.command:
 #      cmd: ./openshift-install agent wait-for bootstrap-complete --dir billi --log-level debug

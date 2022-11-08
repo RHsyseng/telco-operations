@@ -5,10 +5,11 @@ parameters:
  memory: 20480
  numcpus: 16
  disk_size: 200
+ cidr: 192.168.128.0/24
 
 billi:
  type: network
- cidr: 192.168.128.0/24
+ cidr: {{ cidr }}
  dhcp: false
 
 {% for num in range(0,nodes) %}

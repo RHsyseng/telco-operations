@@ -1,28 +1,44 @@
+{% set cluster_network_ipv4 = {"cidr": "10.132.0.0/14", "hostPrefix": 23} %}
+{% set cluster_network_ipv6 = {"cidr": "fd01::/48", "hostPrefix": 64} %}
+{% set service_network_ipv4 = ["172.30.0.0/16"] %}
+{% set service_network_ipv6 = ["fd02::/112"] %}
+{% if dualstack|default(False) %}
+{% set cluster_networks = [cluster_network_ipv4] + [cluster_network_ipv6] %}
+{% set service_networks = service_network_ipv4 + service_network_ipv6 %}
+{% elif ipv6|default(False) or (api_vip is defined and ':' in api_vip) %}
+{% set cluster_networks = [cluster_network_ipv6] %}
+{% set service_networks = service_network_ipv6 %}
+{% else %}
+{% set cluster_networks = [cluster_network_ipv4] %}
+{% set service_networks = service_network_ipv4 %}
+{% endif %}
+
 apiVersion: v1
 baseDomain: {{ domain }}
 compute:
 - architecture: amd64
   hyperthreading: Enabled
   name: worker
-  replicas: {{ workers }}
+  replicas: {{ 0 if sno|default(False) else workers }}
 controlPlane:
   architecture: amd64
   hyperthreading: Enabled
   name: master
-  replicas: {{ masters }}
-imageContentSources: []
+  replicas: {{ 1 if sno|default(False) else masters }}
 metadata:
   name: {{ cluster }}
 networking:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
+  clusterNetwork: {{ cluster_networks }}
   machineNetwork:
-  - cidr: {{ machine_cidr }}
+{% for network in machine_networks %}
+  - cidr: {{ network }}
+{% endif }
   networkType: OVNKubernetes
-  serviceNetwork:
-  - 172.30.0.0/16
+  serviceNetwork: {{ service_networks }}
 platform:
+{% if sno|default(False) %}
+  none: {}
+{% else %}
   baremetal:
     apiVips:
     - {{ api_vip }}
@@ -47,6 +63,7 @@ platform:
 {% endfor %}
     ingressVips:
     - {{ ingress_vip }}
+{% endif %}
 pullSecret: '{{ pull_secret }}'
 sshKey: {{ ssh_key }}
 {% if ca is defined %}
@@ -57,7 +74,7 @@ additionalTrustBundle: |
 imageContentSources:
 {% for source in ['quay.io/openshift-release-dev/ocp-v4.0-art-dev', 'quay.io/openshift-release-dev/ocp-release'] %}
 - mirrors:
-  - {{ disconnected_url }}
+  - {{ disconnected_url }}/{{ disconnected_prefix|default('ocp4') }}
   source: {{ source }}
 {% endfor %}
 {% endif %}
