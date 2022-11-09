@@ -4,6 +4,8 @@ all:
     iso_url: http://192.168.122.1/agent.x86_64.iso
     prefix: 24
     gateway: 192.168.128.1
+    dns_resolver:
+      - 192.168.128.1
     hosts:
     - ip: 192.168.128.11
       mac: de:ad:bb:ef:00:21
