@@ -2,7 +2,7 @@ apiVersion: v1alpha1
 kind: AgentConfig
 metadata:
   name: billi
-rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ip']) }}
+rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ips'][0]['ip']) }}
 hosts:
 {% for host in hosts %}
 - hostname: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
@@ -21,11 +21,13 @@ hosts:
         auto-negotiation: true
         duplex: full
         speed: 1000
-{{ '      ipv6' if ':' in host['ip'] else '      ipv4' }}:
+{% for int in host['ips'] %}
+{{ int['ip']|ipv6 | ternary('      ipv6','      ipv4') }}:
         address:
-        - ip: {{ host['ip'] }}
-          prefix-length: {{ prefix }}
+        - ip: {{ int['ip'] }}
+          prefix-length: {{ int['netmask'] }}
         enabled: true
+{% endfor %}
       mac-address: {{ host['mac'] }}
       mtu: 1500
       name: {{ host['nic']|default('ens3') }}
@@ -33,16 +35,13 @@ hosts:
       type: ethernet
     routes:
       config:
-{% if ':' not in host['ip'] %}
-      - destination: {{ machine_cidr }}
-        next-hop-address: {{ gateway }}
+{% for int in host['ips'] %}
+      - destination: {{ int['ip']|ipv6 | ternary('::/0', '0.0.0.0/0') }}
+        next-hop-address: {{ int['gateway']  }}
         next-hop-interface: {{ host['nic']|default('ens3') }}
-{% endif %}
-      - destination: {{ "::/0" if ':' in host['ip'] else "0.0.0.0/0" }}
-        next-hop-address: {{ gateway }}
-        next-hop-interface: {{ host['nic']|default('ens3') }}
-{% if ':' not in host['ip'] %}
+{% if int['ip']|ipv4 %}
         table-id: 254
 {% endif %}
         enabled: true
+{% endfor %}
 {% endfor %}
