@@ -46,7 +46,3 @@ hosts:
 {% endif %}
         enabled: true
 {% endfor %}
-kind: AgentConfig
-metadata:
-  name: billi
-rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ip']) }}
