@@ -1,4 +1,8 @@
 apiVersion: v1alpha1
+kind: AgentConfig
+metadata:
+  name: billi
+rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ip']) }}
 hosts:
 {% for host in hosts %}
 - hostname: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
