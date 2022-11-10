@@ -25,4 +25,4 @@ all:
     workers: 0
     api_vip: 2620:52:0:1303::2
     ingress_vip: 2620:52:0:1303::3
-    ssh_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDDlaOm3m4qhTk+4cPUTpuaF6Vx89cX5Gk+geytYolgWBWZI32nNu//uq62EqupDJTgSwW4zIhwmjtUoTKqaQLysIly2P+30bvCW/V8PnYIIztMrgrYphpBNzAkihF9HcB0j3lU1fQkk6JwTIuLARlVp5YK7URcTcC8S50CvUWPQHKEOygYF0z+d07ufy7rjtQ7eehYduUNkH6ybphGSV/Iy/LOA2itI24B2+xG2cNkeslgD56MmRpV0gJZIc6oo54VhrjTtIQWF9WvsdVJgzJjxA1GkvY5iZADxgJa7qZ+jlcS7yQ1tQBXhilzCvkn4P0om6nlUrUEFUsr2VXn952h root@u08.dev5.kni.lab.eng.bos.redhat.com
+    ssh_key: CHANGEME
