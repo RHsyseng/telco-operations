@@ -13,7 +13,7 @@
 {% set cluster_networks = [cluster_network_ipv4] %}
 {% set service_networks = service_network_ipv4 %}
 {% endif %}
-{% for addr in hosts[0]['ips'] %}
+{% for addr in hosts[0]['addresses'] %}
 {% set machine_networks = machine_networks.append((addr.ip|string+'/'+addr.netmask|string)|ipaddr('network/prefix')) %}
 {% endfor %}
 

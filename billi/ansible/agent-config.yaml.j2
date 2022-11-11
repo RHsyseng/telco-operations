@@ -2,7 +2,7 @@ apiVersion: v1alpha1
 kind: AgentConfig
 metadata:
   name: billi
-rendezvousIP: {{ rendezvous_ip|default(hosts[0]['ips'][0]['ip']) }}
+rendezvousIP: {{ rendezvous_ip|default(hosts[0]['addresses'][0]['ip']) }}
 hosts:
 {% for host in hosts %}
 - hostname: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
@@ -21,7 +21,7 @@ hosts:
         auto-negotiation: true
         duplex: full
         speed: 1000
-{% for int in host['ips'] %}
+{% for int in host['addresses'] %}
 {{ int['ip']|ipv6 | ternary('      ipv6','      ipv4') }}:
         address:
         - ip: {{ int['ip'] }}
@@ -35,7 +35,7 @@ hosts:
       type: ethernet
     routes:
       config:
-{% for int in host['ips'] %}
+{% for int in host['addresses'] %}
       - destination: {{ int['ip']|ipv6 | ternary('::/0', '0.0.0.0/0') }}
         next-hop-address: {{ int['gateway']  }}
         next-hop-interface: {{ host['nic']|default('ens3') }}
