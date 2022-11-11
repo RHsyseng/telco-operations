@@ -2,6 +2,7 @@
 {% set cluster_network_ipv6 = {"cidr": "fd01::/48", "hostPrefix": 64} %}
 {% set service_network_ipv4 = ["172.30.0.0/16"] %}
 {% set service_network_ipv6 = ["fd02::/112"] %}
+{% set machine_networks = [] %}
 {% if dualstack|default(False) %}
 {% set cluster_networks = [cluster_network_ipv4] + [cluster_network_ipv6] %}
 {% set service_networks = service_network_ipv4 + service_network_ipv6 %}
@@ -12,6 +13,9 @@
 {% set cluster_networks = [cluster_network_ipv4] %}
 {% set service_networks = service_network_ipv4 %}
 {% endif %}
+{% for addr in hosts[0]['ips'] %}
+{% set machine_networks = machine_networks.append((addr.ip|string+'/'+addr.netmask|string)|ipaddr('network/prefix')) %}
+{% endfor %}
 
 apiVersion: v1
 baseDomain: {{ domain }}
