@@ -32,13 +32,20 @@ controlPlane:
 metadata:
   name: {{ cluster }}
 networking:
-  clusterNetwork: {{ cluster_networks }}
+  clusterNetwork:
+{% for network in cluster_networks %}
+  - cidr: {{ network.cidr }}
+    hostPrefix: {{ network.hostPrefix }}
+{% endfor %}
   machineNetwork:
 {% for network in machine_networks %}
   - cidr: {{ network }}
 {% endfor %}
   networkType: OVNKubernetes
-  serviceNetwork: {{ service_networks }}
+  serviceNetwork:
+{% for network in service_networks %}
+  - {{ network }}
+{% endfor %}
 platform:
 {% if sno|default(False) %}
   none: {}
