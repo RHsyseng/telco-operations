@@ -6,6 +6,18 @@ rendezvousIP: {{ rendezvous_ip|default(hosts[0]['addresses'][0]['ip']) }}
 hosts:
 {% for host in hosts %}
 - hostname: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
+{% if 'disk' in host %}
+  rootDeviceHints:
+    deviceName: "/dev/{{ host['disk'] | basename }}"
+{% elif 'hctl' in host %}
+  rootDeviceHints:
+    hctl: "{{ host['hctl'] }}"
+{% elif 'serial' in host %}
+  rootDeviceHints:
+    serialNumber: "{{ host['serial'] }}"
+{% elif 'wwn' in host %}
+  rootDeviceHints:
+    wwn: "{{ host['wwn'] }}"
   interfaces:
   - macAddress: {{ host['mac'] }}
     name: {{ host['nic']|default('ens3') }}

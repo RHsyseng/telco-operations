@@ -58,19 +58,6 @@ platform:
     - name: {{ host['name']|default(cluster + "-" + loop.index0|string) }}
       bootMACAddress: {{ host['mac'] }}
       role: {{ host['role']|default('master' if loop.index0 < 3 else 'worker') }}
-{% if 'disk' in host %}
-      rootDeviceHints:
-        deviceName: "/dev/{{ host['disk'] | basename }}"
-{% elif 'hctl' in host %}
-      rootDeviceHints:
-        hctl: "{{ host['hctl'] }}"
-{% elif 'serial' in host %}
-      rootDeviceHints:
-        serialNumber: "{{ host['serial'] }}"
-{% elif 'wwn' in host %}
-      rootDeviceHints:
-        wwn: "{{ host['wwn'] }}"
-{% endif %}
 {% endfor %}
     ingressVips:
     - {{ ingress_vip }}
