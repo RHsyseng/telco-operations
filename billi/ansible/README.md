@@ -9,11 +9,12 @@ Code to launch nodes using redfish is included
 - valid pull secret
 - ansible installed
 - bmc urls details of your target nodes
+- nmstatectl and python3-netaddr installed
 
 ## How to use
 
-1. Prepare a valid inventory file (check the [sample one](inventory.sample) for reference)
-2. Run `ansible-playbook -i inventory run.yml`
+1. Prepare a valid inventory file (check the [sample one](inventory.sample) for reference). Give it a yml suffix
+2. Run `ansible-playbook -i inventory.yml run.yml`
 
 ## Relevant variables
 

@@ -18,6 +18,7 @@ hosts:
 {% elif 'wwn' in host %}
   rootDeviceHints:
     wwn: "{{ host['wwn'] }}"
+{% endif %}
   interfaces:
   - macAddress: {{ host['mac'] }}
     name: {{ host['nic']|default('ens3') }}
