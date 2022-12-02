@@ -13,7 +13,7 @@ Code to launch nodes using redfish is included
 
 ## How to use
 
-1. Prepare a valid inventory file (check the [sample one](inventory.sample) for reference). Give it a yml suffix
+1. Prepare a valid inventory file (check the [sample one](inventory.yml.sample) for reference). Give it a yml suffix
 2. Run `ansible-playbook -i inventory.yml run.yml`
 
 ## Relevant variables
