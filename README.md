@@ -24,6 +24,7 @@
 * [Fedora CoreOS](./fcos/README.md)
 * [HyperShift](./hypershift/README.md)
 * [Knative](./knative/README.md)
+* [Loki](./loki/README.md)
 * [Microshift](./microshift/README.md)
 * [mirror-registry](./mirror-registry/README.md)
 * [OPA](./opa/README.md)
