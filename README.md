@@ -22,6 +22,7 @@
 * [Billi](./billi/README.md)
 * [Contrail CNI](./contrail/README.md)
 * [Fedora CoreOS](./fcos/README.md)
+* [Gateway API](./gateway-api/README.md)
 * [HyperShift](./hypershift/README.md)
 * [Knative](./knative/README.md)
 * [Loki](./loki/README.md)
