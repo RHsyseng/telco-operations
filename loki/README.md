@@ -221,6 +221,9 @@ Now that Loki is up and running, we can go ahead and configure OpenShift to stor
 
 At this point we should have started getting our logs stored in Loki, we can access the OpenShift Web Console and under `Observe` we should find a `Logs` section.
 
+> **NOTE**: If you don't see the `Logs` section you may need to enable the console plugin. Go to `Operators` -> `Installed Operators` -> `Red Hat OpenShift Logging` and on the right menu press on `Console plugin` to enable it.
+
+
 ![OpenShift Web Console Logs](./assets/ocp_console_logs.png)
 
 We can choose the time period (Num 1) and between three different streams (Num 2):
