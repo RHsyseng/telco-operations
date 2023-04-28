@@ -7,8 +7,8 @@ Information in this document is not supported by Red Hat, official docs can be f
 Versions used:
 
 - OpenShift v4.12
-- Cluster Logging Operator v5.6.3
-- Loki Operator v5.6.3
+- Cluster Logging Operator v5.7
+- Loki Operator v5.7
 
 The end goal is to be able to create alerts from the logs ingested by Loki.
 
@@ -84,7 +84,7 @@ All the commands executed below must be run connected to the OpenShift cluster a
       name: loki-operator
       source: redhat-operators
       sourceNamespace: openshift-marketplace
-      startingCSV: loki-operator.v5.6.3
+      startingCSV: loki-operator.v5.7.0
     ---
     apiVersion: operators.coreos.com/v1alpha1
     kind: Subscription
@@ -97,7 +97,7 @@ All the commands executed below must be run connected to the OpenShift cluster a
       name: cluster-logging
       source: redhat-operators
       sourceNamespace: openshift-marketplace
-      startingCSV: cluster-logging.v5.6.3
+      startingCSV: cluster-logging.v5.7.0
     EOF
     ~~~
 
@@ -223,7 +223,6 @@ At this point we should have started getting our logs stored in Loki, we can acc
 
 > **NOTE**: If you don't see the `Logs` section you may need to enable the console plugin. Go to `Operators` -> `Installed Operators` -> `Red Hat OpenShift Logging` and on the right menu press on `Console plugin` to enable it.
 
-
 ![OpenShift Web Console Logs](./assets/ocp_console_logs.png)
 
 We can choose the time period (Num 1) and between three different streams (Num 2):
@@ -265,66 +264,166 @@ Audit logs are not sent to the logging subsystem by default, in order to enable 
 
 ## Creating Alerts out of our logs
 
-At this point we have the logging subsystem ingesting our logs, next step will be configuring alerts out of them.
+By default, Loki Ruler will send alerts to the local AlertManager instance. In case you want to send alerts to a different AlertManager you can create a `RulerConfig`:
 
-1. We need to tell Loki how to connect to the Alertmanager deployed in the OpenShift cluster, we will use a `RulerConfig` for that:
+> **NOTE**: Remember you're not required to create the `RulerConfig` below if you plan to use the in-cluster AlertManager.
 
-    ~~~sh
-    cat << EOF | oc apply -f -
-    ---
-    apiVersion: loki.grafana.com/v1beta1
-    kind: RulerConfig
-    metadata:
-      name: rulerconfig
-      namespace: openshift-logging
-    spec:
-      evaluationInterval: 1m
-      pollInterval: 1m
-      alertmanager:
-        discovery:
-          enableSRV: true
-          refreshInterval: 1m
-        enableV2: true
-        endpoints:
-          - "https://_web._tcp.alertmanager-operated.openshift-monitoring.svc"
-        enabled: true
-        refreshPeriod: 10s 
-    EOF
-    ~~~
+
+~~~sh
+cat << EOF | oc apply -f -
+---
+apiVersion: loki.grafana.com/v1beta1
+kind: RulerConfig
+metadata:
+  name: rulerconfig
+  namespace: openshift-logging
+spec:
+  evaluationInterval: 1m
+  pollInterval: 1m
+  alertmanager:
+    discovery:
+      enableSRV: true
+      refreshInterval: 1m
+    enableV2: true
+    endpoints:
+      - "https://_web._tcp.alertmanager-operated.openshift-monitoring.svc"
+    enabled: true
+    refreshPeriod: 10s 
+EOF
+~~~
 
 At this point we are ready to create alerts, we can create two kinds of alerting rules:
 
 1. `AlertingRule`: Alerting rules allow you to define alert conditions based on Prometheus expression language expressions and to send notifications about firing alerts to an external service.
 2. `RecordingRule`: Recording rules allow you to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series.
 
-Let's add an `AlertingRule`:
+### Creating an Alert out of application logs
+
+In this example we will be creating an alert for one of our applications.
+
+1. Deploy the application
+
+    ~~~sh
+    cat <<EOF | oc apply -f -
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      labels:
+        kubernetes.io/metadata.name: reversewords
+        openshift.io/cluster-monitoring: "true"
+      name: reversewords
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: reverse-words
+      name: reverse-words
+      namespace: reversewords
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: reverse-words
+      strategy: {}
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: reverse-words
+        spec:
+          containers:
+          - image: quay.io/mavazque/reversewords:latest
+            name: reversewords
+            resources: {}
+    status: {}
+    EOF
+    ~~~
+
+2. This application shows the following log when it starts:
+
+    ~~~log
+    2023/04/20 14:54:30 Starting Reverse Api v0.0.25 Release: NotSet
+    2023/04/20 14:54:30 Listening on port 8080
+    ~~~
+
+3. We can add an alert when the application starts without a `Release` being set:
+
+    > **NOTE**: The application alerts must be created in the namespace where the app runs. In this case the alert is looking for the content `Listening on port 8080` in the logs for the past 2h. If it finds more than 0 occurrences, an alert will be fired.
+
+    ~~~sh
+    cat <<EOF | oc apply -f -
+    ---
+    apiVersion: loki.grafana.com/v1
+    kind: AlertingRule
+    metadata:
+      name: reversewords-alerts
+      namespace: reversewords
+      labels:
+        openshift.io/cluster-monitoring: "true"
+    spec:
+      tenantID: "application"
+      groups:
+        - name: reversewords-app-rules-group
+          interval: 20s
+          rules:
+            - alert: ReverseWordsListeningOnPort8080
+              expr: |
+                sum(count_over_time({kubernetes_namespace_name="reversewords", kubernetes_pod_name=~"reverse-words-.*"} |= "Listening on port 8080" [2h])) > 0
+              for: 10s
+              labels:
+                severity: info
+                tenantId: application
+              annotations:
+                summary: Reverse Words App is listening on port 8080
+                description: Reverse Words App is listening on port 8080
+    ~~~
+
+4. At this point we will see this on the Alert UI:
+
+    ![ReverseWords Alert on UI](./assets/reversewordsalert.png)
+
+5. We can open the alert details as well:
+
+    ![ReverseWords Alert Open](./assets/reversewordsalertopen.png)
+
+### Creating an Alert out of audit logs
+
+We can also create alerts out of platform logs, for example, the following alert could be created to get notified when someone runs `oc rsh` or `oc exec`:
 
 ~~~sh
-cat << EOF | oc apply -f -
+cat <<EOF | oc apply -f -
 ---
-apiVersion: loki.grafana.com/v1beta1
+apiVersion: loki.grafana.com/v1
 kind: AlertingRule
 metadata:
-  name: loki-operator-infra-alerts
-  namespace: openshift-operators-redhat
+  name: audit-alerts
+  namespace: openshift-logging
   labels:
     openshift.io/cluster-monitoring: "true"
 spec:
-  tenantID: "infrastructure"
+  tenantID: "audit"
   groups:
-    - name: LokiOperatorHighReconciliationError
+    - name: audit-rules-group
+      interval: 20s
       rules:
-        - alert: HighPercentageError
+        - alert: OcRshExecCommandDetected
           expr: |
-            sum(rate({kubernetes_namespace_name="openshift-operators-redhat", kubernetes_pod_name=~"loki-operator-controller-manager.*"} |= "error" [1m])) by (job)
-              /
-            sum(rate({kubernetes_namespace_name="openshift-operators-redhat", kubernetes_pod_name=~"loki-operator-controller-manager.*"}[1m])) by (job)
-              > 0.01
+            sum(count_over_time({log_type="audit"} |~ "/exec?" [5m])) > 0
           for: 10s
           labels:
-            severity: page
-            tenantId: infrastructure
+            severity: warning
+            tenantId: audit
           annotations:
-            summary: High Loki Operator Reconciliation Errors
+            summary: Detected oc rsh / exec command execution
+            description: Detected oc rsh / exec command execution
 EOF
 ~~~
+
+In this case, once it fires this is what we see:
+
+![oc rsh alert](./assets/ocrshalert.png)
+
+![oc rsh alert open](./assets/ocrshalertopen.png)
