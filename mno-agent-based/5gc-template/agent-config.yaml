@@ -1,0 +1,194 @@
+---
+# https://github.com/openshift/installer/blob/master/pkg/types/agent/agent_config_type.go#L17
+apiVersion: v1alpha1
+metadata:
+  name: 5gc
+additionalNTPSources:
+  - pool.ntp.org
+rendezvousIP: 10.10.10.116
+hosts:
+  - hostname: 5gc-m0
+    role: master
+    rootDeviceHints:
+      deviceName: "/dev/vda"
+    interfaces:
+      - name: ens3
+        macAddress: de:ad:be:ff:11:60
+      - name: ens4
+        macAddress: de:ad:be:ff:11:61
+    networkConfig:
+      interfaces:
+        - name: bond0
+          type: bond
+          state: up
+          mtu: 9000
+          link-aggregation:
+            mode: active-backup
+            options:
+              miimon: 100
+              primary: ens3
+            port:
+              - ens3
+              - ens4
+        - name: bond0.10
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 10
+          ipv4:
+            address:
+              - ip: 10.10.10.116
+                prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: true
+            dhcp: true
+            auto-dns: false
+            auto-gateway: true
+            auto-routes: true
+        - name: bond0.11
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 11
+          ipv4:
+            enabled: true
+            address:
+              - ip: 11.11.11.116
+                prefix-length: 24
+            dhcp: false
+          ipv6:
+            enabled: false
+      dns-resolver: &dns
+        config:
+          server:
+            - 10.10.20.10
+      routes: &routes
+        config:
+          - destination: 0.0.0.0/0
+            next-hop-address: 10.10.10.1
+            metric: 100
+            next-hop-interface: bond0.10
+            table-id: 254
+          - destination: 200.100.100.0/24
+            metric: 400
+            next-hop-address: 11.11.11.254
+            next-hop-interface: bond0.11
+  - hostname: 5gc-m1
+    role: master
+    rootDeviceHints:
+      deviceName: "/dev/vda"
+    interfaces:
+      - name: ens3
+        macAddress: de:ad:be:ff:11:70
+      - name: ens4
+        macAddress: de:ad:be:ff:11:71
+    networkConfig:
+      interfaces:
+        - name: bond0
+          type: bond
+          state: up
+          mtu: 9000
+          link-aggregation:
+            mode: active-backup
+            options:
+              miimon: '140'
+            ports:
+              - ens3
+              - ens4
+        - name: bond0.10
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 10
+          ipv4:
+            address:
+              - ip: 10.10.10.117
+                prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: true
+            dhcp: true
+            auto-dns: false
+            auto-gateway: true
+            auto-routes: true
+        - name: bond0.11
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 11
+          ipv4:
+            enabled: true
+            address:
+              - ip: 11.11.11.117
+                prefix-length: 24
+            dhcp: false
+          ipv6:
+            enabled: false
+      dns-resolver: *dns
+      routes: *routes
+  - hostname: 5gc-m2
+    role: master
+    rootDeviceHints:
+      deviceName: "/dev/vda"
+    interfaces:
+      - name: ens3
+        macAddress: de:ad:be:ff:11:80
+      - name: ens4
+        macAddress: de:ad:be:ff:11:81
+    networkConfig:
+      interfaces:
+        - name: bond0
+          type: bond
+          state: up
+          mtu: 9000
+          link-aggregation:
+            mode: active-backup
+            options:
+              miimon: '140'
+            port:
+              - ens3
+              - ens4
+        - name: bond0.10
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 10
+          ipv4:
+            address:
+              - ip: 10.10.10.118
+                prefix-length: 24
+            dhcp: false
+            enabled: true
+          ipv6:
+            enabled: true
+            autoconf: true
+            dhcp: true
+            auto-dns: false
+            auto-gateway: true
+            auto-routes: true
+        - name: bond0.11
+          type: vlan
+          state: up
+          vlan:
+            base-iface: bond0
+            id: 11
+          ipv4:
+            enabled: true
+            address:
+              - ip: 11.11.11.118
+                prefix-length: 24
+            dhcp: false
+          ipv6:
+            enabled: false
+      dns-resolver: *dns
+      routes: *routes

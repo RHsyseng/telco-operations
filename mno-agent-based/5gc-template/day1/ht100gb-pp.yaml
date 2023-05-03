@@ -1,0 +1,30 @@
+---
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  annotations:
+    kubeletconfig.experimental: |
+      {"systemReserved": {"memory": "8Gi"}}
+  name: ht100gb
+spec:
+  cpu:
+    isolated: 1-25,27-51,53-77,79-103
+    reserved: 0,26,52,78
+  hugepages:
+    defaultHugepagesSize: 1G
+    pages:
+      - count: 6
+        node: 0
+        size: 1G
+      - count: 6
+        node: 1
+        size: 1G
+  net:
+    devices:
+      - interfaceName: eno*
+      - interfaceName: ens5f0
+    userLevelNetworking: true
+  nodeSelector:
+    node-role.kubernetes.io/ht100gb: ""
+  numa:
+    topologyPolicy: single-numa-node

@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+baseDomain: eric.vlab
+# proxy:
+#   httpProxy: http://10.10.20.10:3128
+#   httpsProxy: http://10.10.20.10:3128
+#   noProxy: .eric.vlab,10.10.20.0/24
+compute:
+  - architecture: amd64
+    hyperthreading: Enabled
+    name: worker
+    replicas: 0
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+metadata:
+  name: 5gc
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+    - cidr: fd02::/48
+      hostPrefix: 64
+  machineNetwork:
+    - cidr: 10.10.10.0/24
+    - cidr: 2600:52:52:52::0/64
+  serviceNetwork:
+    - 172.30.0.0/16
+    - fd03::/112
+platform:
+  baremetal:
+    apiVips:
+      - 10.10.10.125
+      - 2600:52:52:52::125
+    ingressVips:
+      - 10.10.10.126
+      - 2600:52:52:52::126

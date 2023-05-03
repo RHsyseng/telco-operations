@@ -1,0 +1,6 @@
+10.10.10.125 api.5gc.eric.vlab
+10.10.10.126 console-openshift-console.apps.5gc.eric.vlab oauth-openshift.apps.5gc.eric.vlab multicloud-console.apps.5gc.eric.vlab openshift-gitops-server-openshift-gitops.apps.5gc.eric.vlab
+
+
+2600:52:52:52::125 api.5gc.eric.vlab
+2600:52:52:52::126 console-openshift-console.apps.5gc.eric.vlab oauth-openshift.apps.5gc.eric.vlab multicloud-console.apps.5gc.eric.vlab openshift-gitops-server-openshift-gitops.apps.5gc.eric.vlab

@@ -1,0 +1,60 @@
+---
+apiVersion: metallb.io/v1beta1
+kind: BFDProfile
+metadata:
+  name: bfd-profile
+  namespace: metallb-system
+spec:
+  receiveInterval: 300
+  transmitInterval: 300
+  detectMultiplier: 3
+  echoInterval: 300
+  echoMode: false
+  passiveMode: false
+  minimumTtl: 254
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPPeer
+metadata:
+  name: metallb-signaling
+  namespace: metallb-system
+spec:
+  peerAddress: 11.11.11.254
+  peerASN: 8002
+  myASN: 7003
+  holdTime: "180s"
+  bfdProfile: bfd-profile
+---
+apiVersion: metallb.io/v1beta1
+kind: Community
+metadata:
+  name: signaling
+  namespace: metallb-system
+spec:
+  communities:
+    - name: SIGNALING
+      value: '7003:008'
+---
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  name: signaling
+  namespace: metallb-system
+spec:
+  communities:
+    - SIGNALING
+  ipAddressPools:
+    - signaling
+  peers:
+    - metallb-signaling
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: signaling
+  namespace: metallb-system
+spec:
+  autoAssign: false
+  addresses:
+  - 5.8.6.1/32
+  - 5.8.6.9/32

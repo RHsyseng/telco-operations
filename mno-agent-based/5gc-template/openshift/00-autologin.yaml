@@ -1,0 +1,23 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master 
+  name: 99-master-autologin
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    systemd:
+      enabled: True
+      units:
+      - dropins:
+        - contents: |
+            [Service]
+            # Override Execstart in main unit
+            ExecStart=
+            # Add new Execstart with `-` prefix to ignore failure`
+            ExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM
+          name: autologin-core.conf
+        name: getty@.service

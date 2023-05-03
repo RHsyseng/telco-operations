@@ -1,0 +1,8 @@
+export PULL_SECRET_PATH=.pull-secret.json
+export SSHPUBKEYFILE=id_rsa.pub
+export HTTP_SERVER=http://192.168.100.200:9000/
+export BMC_TYPE=sushy
+#export AUTH=root:Redhat!123
+#export http_proxy=http://10.10.20.10:3128
+#export https_proxy=http://10.10.20.10:3128
+#export no_proxy=.eric.vlab,10.10.20.10/24,192.168.100.0/24

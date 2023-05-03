@@ -1,0 +1,18 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: master-networkmanager-logging-trace
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: "/etc/NetworkManager/NetworkManager.conf"
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,W21haW5dCltsb2dnaW5nXQpsZXZlbD1UUkFDRQpkb21haW49QUxM

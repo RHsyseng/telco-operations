@@ -32,6 +32,7 @@
 * [RHACM](./rhacm/README.md)
 * [SNO](./sno/README.md)
 * [ZTP](./ztp/README.md)
+* [MNO Agent-based](./mno-agent-based/README.md)
 
 ## Labs
 

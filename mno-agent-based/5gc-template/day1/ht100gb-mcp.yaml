@@ -1,0 +1,19 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfigPool
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: ht100gb
+  name: ht100gb
+spec:
+  machineConfigSelector:
+    matchExpressions:
+      - key: machineconfiguration.openshift.io/role
+        operator: In
+        values:
+          - worker
+          - ht100gb
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/ht100gb: ""
+  paused: false
