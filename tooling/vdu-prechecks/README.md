@@ -5,7 +5,7 @@ vDU systems at the edge need specific [firmware values](https://docs.openshift.c
 ## Usage
 ~~~
 $ ./vdu_precheck.py -h
-usage: vdu_precheck.py [-h] -i IP -u USER -p PASSWORD -t TYPE [-d] [-v]
+usage: vdu_precheck.py [-h] -i IP -u USER -p PASSWORD -t TYPE [-d]
 
 queries redfish to determine if a system is ready to run a vDU workload
 
@@ -15,23 +15,17 @@ options:
   -u USER, --user USER  redfish user
   -p PASSWORD, --password PASSWORD
                         redfish password
-  -t TYPE, --type TYPE  vdu type (mb vs. lb)
+  -t TYPE, --type TYPE  vDU type eg midband or lowband
   -d, --debug           enable debugging
-  -v, --verify          ssl verify
   ~~~
-
 
 ### Example
 
 ~~~
 $ ./vdu_precheck.py  -i 192.168.42.24 -u root -p P@ssw0rd -t mb 
 checking BIOS for HPE system @ 192.168.42.24
-BIOS mismatch found
-want: EnhancedProcPerf: Enabled
-have: EnhancedProcPerf: Disabled
-BIOS mismatch found
-want: MemPatrolScrubbing: Disabled
-have: MemPatrolScrubbing: Enabled
+BIOS mismatch: want EnhancedProcPerf=Enabled found Disabled
+BIOS mismatch: want MemPatrolScrubbing=Disabled found Enabled
 NICs:
 [ { 'macs': [ 'de:ea:be:ee:ff:e0',
               'de:ea:be:ee:ff:e1',

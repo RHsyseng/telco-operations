@@ -5,10 +5,11 @@ Script to check whether a server is ready to be used for a vDU, via redfish
 '''
 
 import argparse
+import base64
+import json
 import pprint
-import requests
-import urllib3
-
+import ssl
+from urllib.request import urlopen, Request
 
 parser = argparse.ArgumentParser(
     prog='vdu_precheck.py',
@@ -17,13 +18,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-i","--ip", help="redfish ip", required=True)
 parser.add_argument("-u","--user", help="redfish user", required=True)
 parser.add_argument("-p","--password", help="redfish password", required=True)
-parser.add_argument("-t","--type", help="vdu type (mb vs. lb)", required=True)
+parser.add_argument("-t","--type", help="vDU type eg midband or lowband", required=True)
 parser.add_argument("-d","--debug", help="enable debugging", action="store_true")
-parser.add_argument("-v","--verify", help="ssl verify", action="store_true")
 args = parser.parse_args()
-
-if not args.verify:
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 reference_bios = {
     "HPE": {
@@ -65,11 +62,17 @@ dpp = pprint.PrettyPrinter(indent=2)
 
 def get_url(url):
     '''
-    retrives a URL and returns the json formatted response
+    retrieves a URL and returns the json formatted response
     '''
 
-    request = requests.get(url, verify=args.verify, auth=(args.user, args.password))
-    return request.json()
+    credentials = base64.b64encode(bytes(f'{args.user}:{args.password}', 'ascii')).decode('utf-8')
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json',
+               'Authorization': f'Basic {credentials}'}
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    request = Request(url, headers=headers)
+    return json.loads(urlopen(request, context=context).read())
 
 def get_endpoint():
     '''
@@ -104,15 +107,12 @@ def check_bios(sep, vendor):
     for key in reference_bios[vendor].keys():
         if key in bios:
             if args.debug:
-                print(f"want: {key}: {reference_bios[vendor][key]}")
-                print(f"have: {key}: {bios[key]}")
+                print(f"want {key}={reference_bios[vendor][key]} found {bios[key]}")
             if reference_bios[vendor][key] != bios[key]:
-                print("BIOS mismatch found")
+                print(f"BIOS mismatch: want {key}={reference_bios[vendor][key]} found {bios[key]}")
                 errors = True
-                print(f"want: {key}: {reference_bios[vendor][key]}")
-                print(f"have: {key}: {bios[key]}")
         else:
-            print(f"key not found: {key}")
+            print(f"Key not found: {key}")
             errors = True
     if not errors:
         print("BIOS: ok")
@@ -130,7 +130,7 @@ def get_nics(sep, vendor):
     elif vendor == "Dell Inc.":
         url = f"https://{args.ip}{sep}/NetworkAdapters"
     else:
-        print(f"unsupported server vendor: {vendor}")
+        print(f"Unsupported server vendor: {vendor}")
         return
 
     members = get_url(url)['Members']
@@ -146,7 +146,7 @@ def get_nics(sep, vendor):
             else:
                 nics.append(nic)
     if len(nics) == 0:
-        print("no supported nics found")
+        print("No supported nics found")
     else:
         print("NICs:")
         dpp.pprint(nics)
@@ -174,7 +174,6 @@ def parse_nic(nic_data, vendor):
     if vendor == "Dell Inc.":
         nic_model = nic_data['Model']
         if supported_nic(nic_model):
-            #print(nic_data)
             ports = nic_data['NetworkPorts']['@odata.id']
             url = f"https://{args.ip}{ports}"
             members = get_url(url)['Members']
@@ -199,11 +198,7 @@ def supported_nic(model):
     test if a given NIC is supported
     '''
 
-    for supported in supported_nics:
-        if supported in model:
-            return True
-
-    return False
+    return len([nic for nic in supported_nics if nic in model]) > 0
 
 def get_fec(sep, vendor):
     '''
@@ -235,7 +230,7 @@ def get_disks(sep, vendor):
         url = f"https://{args.ip}{sep}/Storage/CPU.1"
         members = get_url(url)
     else:
-        print(f"unsupported server vendor: {vendor}")
+        print(f"Unsupported server vendor: {vendor}")
         return
 
     if vendor == "HPE":
@@ -273,7 +268,7 @@ def get_disks(sep, vendor):
             })
 
     if len(disks) == 0:
-        print("no disks found")
+        print("No disks found")
     else:
         print("Disks:")
         dpp.pprint(disks)
@@ -286,17 +281,17 @@ def main():
 
     sep = get_endpoint()
     vendor = get_vendor(sep)
-    print(f"checking BIOS for {vendor} system @ {args.ip}")
+    print(f"Checking BIOS for {vendor} system @ {args.ip}")
 
     if vendor in reference_bios:
         check_bios(sep, vendor)
     else:
-        print(f"no reference BIOS config for {vendor}")
+        print(f"No reference BIOS config for {vendor}")
 
     get_nics(sep, vendor)
     get_disks(sep, vendor)
 
-    if args.type == 'mb':
+    if args.type == 'midband':
         get_fec(sep, vendor)
 
 main()
