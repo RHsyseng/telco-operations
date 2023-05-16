@@ -191,7 +191,7 @@ def parse_nic(nic_data, vendor):
                 })
             return nics
 
-    return None
+    return []
 
 def supported_nic(model):
     '''
