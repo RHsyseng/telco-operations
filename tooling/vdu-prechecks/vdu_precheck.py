@@ -191,8 +191,6 @@ def parse_nic(nic_data, vendor):
                 })
             return nics
 
-    return None
-
 def supported_nic(model):
     '''
     test if a given NIC is supported
