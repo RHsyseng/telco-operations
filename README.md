@@ -18,8 +18,8 @@
 
 ## Documentation
 
+* [ABI](./abi/README.md)
 * [Assisted Installer](./assisted-installer/README.md)
-* [Billi](./billi/README.md)
 * [Contrail CNI](./contrail/README.md)
 * [Fedora CoreOS](./fcos/README.md)
 * [Gateway API](./gateway-api/README.md)
@@ -30,6 +30,7 @@
 * [mirror-registry](./mirror-registry/README.md)
 * [OPA](./opa/README.md)
 * [RHACM](./rhacm/README.md)
+* [ROSA](./rosa/README.md)
 * [SNO](./sno/README.md)
 * [ZTP](./ztp/README.md)
 

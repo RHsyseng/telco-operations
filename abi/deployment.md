@@ -1,6 +1,6 @@
-# **Deploying an OpenShift Cluster using BILLI workflow**
+# **Deploying an OpenShift Cluster using ABI workflow**
 
-This document provides a first view at deploying a cluster using billi workflow, which is a subcommand for openshift-install that will generate a custom iso for installing openshift from an install config in an unattended fashion.
+This document provides a first view at deploying a cluster using abi workflow, which is a subcommand for openshift-install that will generate a custom iso for installing openshift from an install config in an unattended fashion.
 
 ## **Workflow**
 
@@ -46,15 +46,14 @@ The following command can also be used to handle this part
 openshift-install agent wait-for install-complete
 ```
 
-
 ## **Bonus**
 
 When testing, we can use the following kcli commands to create an isolated network and vms for the install using the iso and with specific macs and reverse dns.
 
 ```
 mv agent_x86_64.iso /var/lib/libvirt/images
-kcli create network -c 192.168.128.0/24 --nodhcp billi
-kcli create vm -P iso=agent_x86_64.iso -P memory=20480 -P numcpus=16 -P disks=[200] -P nets=['{"name":"billi","mac":"de:ad:bb:ef:00:21","ip":"192.168.128.11","reservedns":"true"}'] billi --count=3
+kcli create network -c 192.168.128.0/24 --nodhcp abi
+kcli create vm -P iso=agent_x86_64.iso -P memory=20480 -P numcpus=16 -P disks=[200] -P nets=['{"name":"abi","mac":"de:ad:bb:ef:00:21","ip":"192.168.128.11","reservedns":"true"}'] abi --count=3
 ```
 
 ## **References**
