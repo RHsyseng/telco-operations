@@ -1,0 +1,10 @@
+apiVersion: metallb.io/v1beta1
+kind: BGPPeer
+metadata:
+  name: peer-test
+  namespace: openshift-operators
+spec:
+  bfdProfile: test-bfd-prof
+  myASN: 64520
+  peerASN: 64521
+  peerAddress: $FRR_IP

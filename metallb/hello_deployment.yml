@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hello-node
+  name: hello-node
+  namespace: test-metallb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-node
+  template:
+    metadata:
+      labels:
+        app: hello-node
+    spec:
+      containers:
+      - command:
+        - /agnhost
+        - serve-hostname
+        image: k8s.gcr.io/e2e-test-images/agnhost:2.33
+        imagePullPolicy: IfNotPresent
+        name: agnhost
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    metallb.universe.tf/ip-allocated-from-pool: address-pool-bgp
+  name: test-frr
+spec:
+  selector:
+        app: hello-node
+  ports:
+        - port: 80
+          protocol: TCP
+          targetPort: 9376
+  type: LoadBalancer

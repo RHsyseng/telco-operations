@@ -1,0 +1,12 @@
+apiVersion: metallb.io/v1beta1
+kind: BFDProfile
+metadata:
+  name: test-bfd-prof
+  namespace: openshift-operators
+spec:
+  detectMultiplier: 37
+  echoMode: true
+  minimumTtl: 10
+  passiveMode: true
+  receiveInterval: 35
+  transmitInterval: 35
