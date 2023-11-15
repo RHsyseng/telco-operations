@@ -30,6 +30,7 @@
 * [Microshift](./microshift/README.md)
 * [mirror-registry](./mirror-registry/README.md)
 * [OPA](./opa/README.md)
+* [OpenShift](./openshift/README.md)
 * [RHACM](./rhacm/README.md)
 * [ROSA](./rosa/README.md)
 * [SNO](./sno/README.md)
