@@ -6,7 +6,7 @@ This document describes how to consume BGP in metallb to expose a service throug
 
 ### **Requisites**
 
-- An openshift cluster with a valid storage cluster and metallb operator deployed
+- An OpenShift cluster with a valid storage cluster and metallb operator deployed.
 - A vm or a dedicated Baremetal to be used as BGP node (This could be a dedicated router too).
 - Some unused ips
 
@@ -16,7 +16,7 @@ This document describes how to consume BGP in metallb to expose a service throug
 
 First, we edit `frr/frr.conf` and specify the ip of the BGP node and those of the OpenShift nodes.
  
-We run BGP stack through podman
+We then run BGP stack through podman
 
 ```
 podman run -d --rm  -v /root/frr:/etc/frr:Z --net=host --name frr-upstream --privileged quay.io/frrouting/frr:8.5.0
@@ -28,8 +28,8 @@ We deploy metallb and configure it for BGP.
 
 We need to edit
 
-- `01_pool.yml` to specify which ips to use with BGP. Note that those ips need to available and not belong to the network segment used by the Openshift installation.
-- `03_peers.yml` first and indicate the ip of the BGP node (BGP_IP)
+- `01_pool.yml` to specify which ips to use with BGP. Note that those ips need to be available and not belong to the network segment used by the OpenShift installation.
+- `03_peers.yml` to indicate the ip of the BGP node (BGP_IP)
 
 ```
 oc create -f 01_pool.yml
@@ -61,9 +61,9 @@ oc create -f hello_deployment.yml
 By doing a describe of the service, we will see
 
 - which IP it got assigned
-- how the service is beeing advertised on the different nodes
+- how the service is being advertised on the different nodes
 
-We can check from one of the speaker nodes how the ip of the service is beeing advertised
+We can check from one of the speaker nodes how the ip of the service is being advertised
 
 ```
 oc -n openshift-operators exec -it speaker-275d5  -c frr -- vtysh -c "show bgp ipv4"
@@ -80,10 +80,9 @@ podman exec -it frr-upstream   vtysh -c "show ip route"
 When testing, we can use the following kcli commands to create a cluster with metallb and a dedicated vm with frr running as container
 
 ```
-kcli create vm -i centos8stream -P memory=8192 -P numcpus=16 -P cmds=['yum -y install podman'] bgp-node
-kcli create cluster openshift -P clusterprofile=sample-openshift-compact myopenshift --force
+kcli create vm -i centos9stream -P memory=8192 -P numcpus=16 -P cmds=['dnf -y install podman'] bgp-node
 BGP_IP=$(kcli info vm bgp-node -fv ip)
-kcli create app openshift metallb-operator -P bgp=true -P metallb_peer_address=$BGP_IP
+kcli create cluster openshift -P clusterprofile=sample-openshift-compact myopenshift -P apps=[metallb-operator] -p metallb_bgp=true -P metallb_peer_address=$BGP_IP --force
 ```
 
 ## **References**
